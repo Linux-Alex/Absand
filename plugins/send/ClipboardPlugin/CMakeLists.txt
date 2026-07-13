@@ -20,6 +20,7 @@ target_include_directories(ClipboardPlugin PRIVATE
 set_target_properties(ClipboardPlugin PROPERTIES
     CXX_VISIBILITY_PRESET default
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/plugins/send
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/plugins/send
     PREFIX ""
 )
 

@@ -7,6 +7,7 @@ find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
 
 add_library(SFTPDestinationPlugin SHARED
     SFTPDestinationPlugin.cpp
+    ../../../src/core/TransferHelpers.cpp
 )
 
 target_link_libraries(SFTPDestinationPlugin
@@ -21,6 +22,7 @@ target_include_directories(SFTPDestinationPlugin PRIVATE
 set_target_properties(SFTPDestinationPlugin PROPERTIES
     CXX_VISIBILITY_PRESET default
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/plugins/destination
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/plugins/destination
     PREFIX ""
 )
 

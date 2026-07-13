@@ -21,6 +21,7 @@ target_include_directories(SevenZipPlugin PRIVATE
 set_target_properties(SevenZipPlugin PROPERTIES
     CXX_VISIBILITY_PRESET default
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/plugins/archive
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/plugins/archive
     PREFIX ""
 )
 

@@ -23,6 +23,7 @@ target_include_directories(ZipPlugin PRIVATE
 set_target_properties(ZipPlugin PROPERTIES
     CXX_VISIBILITY_PRESET default
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/plugins/archive
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/plugins/archive
     PREFIX ""
 )
 

@@ -7,6 +7,7 @@ find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
 
 add_library(LocalFolderPlugin SHARED
     LocalFolderPlugin.cpp
+    ../../../src/core/TransferHelpers.cpp
 )
 
 target_link_libraries(LocalFolderPlugin
@@ -21,6 +22,7 @@ target_include_directories(LocalFolderPlugin PRIVATE
 set_target_properties(LocalFolderPlugin PROPERTIES
     CXX_VISIBILITY_PRESET default
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/plugins/destination
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/plugins/destination
     PREFIX ""
 )
 

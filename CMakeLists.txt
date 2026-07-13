@@ -151,8 +151,15 @@ if(SEVENZIP_MAKE_EXECUTABLE)
     set(SEVENZIP_RUNTIME_SOURCE "${SEVENZIP_FORMAT7ZF_DIR}/_o/${SEVENZIP_RUNTIME_NAME}")
     set(SEVENZIP_RUNTIME_OUTPUT "${CMAKE_BINARY_DIR}/${SEVENZIP_RUNTIME_NAME}")
 
+    set(SEVENZIP_MAKE_OPTIONS)
+    if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        # GCC 16 reports a false-positive array-bounds warning in 7-Zip 26.02.
+        # Keep upstream warnings-as-errors enabled except for that diagnostic.
+        list(APPEND SEVENZIP_MAKE_OPTIONS "CXX_WARN_FLAGS=-Wno-error=array-bounds")
+    endif()
+
     add_custom_target(sevenzip_runtime ALL
-        COMMAND ${SEVENZIP_MAKE_EXECUTABLE} -C "${SEVENZIP_FORMAT7ZF_DIR}" -f makefile.gcc
+        COMMAND ${SEVENZIP_MAKE_EXECUTABLE} -C "${SEVENZIP_FORMAT7ZF_DIR}" -f makefile.gcc ${SEVENZIP_MAKE_OPTIONS}
         COMMAND ${CMAKE_COMMAND} -E copy_if_different "${SEVENZIP_RUNTIME_SOURCE}" "${SEVENZIP_RUNTIME_OUTPUT}"
         BYPRODUCTS "${SEVENZIP_RUNTIME_SOURCE}" "${SEVENZIP_RUNTIME_OUTPUT}"
         COMMENT "Building bundled 7-Zip runtime"
