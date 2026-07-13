@@ -116,7 +116,7 @@ void MainDialog::setupUI()
     connect(ui->generatePasswordButton, &QPushButton::clicked, this, &MainDialog::onPasswordGenerateClicked);
     connect(ui->copyPasswordButton, &QPushButton::clicked, this, &MainDialog::onPasswordCopyClicked);
     connect(ui->showPasswordCheckbox, &QCheckBox::toggled, this, &MainDialog::onPasswordShowToggle);
-    connect(ui->encryptCheckbox, &QCheckBox::checkStateChanged, this, &MainDialog::onEncryptionCheckboxChanged);
+    connect(ui->encryptCheckbox, &QCheckBox::toggled, this, &MainDialog::onEncryptionCheckboxChanged);
     connect(ui->formatCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainDialog::onFormatChanged);
     connect(ui->destTypeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainDialog::onDestinationTypeChanged);
 
@@ -662,9 +662,9 @@ void MainDialog::onPasswordShowToggle(bool checked)
     ui->passwordEdit->setEchoMode(checked ? QLineEdit::Normal : QLineEdit::Password);
 }
 
-void MainDialog::onEncryptionCheckboxChanged(int state)
+void MainDialog::onEncryptionCheckboxChanged(bool checked)
 {
-    Q_UNUSED(state);
+    Q_UNUSED(checked);
     updateEncryptionControls();
 }
 

@@ -43,7 +43,7 @@ private slots:
     void onPasswordGenerateClicked();
     void onPasswordCopyClicked();
     void onPasswordShowToggle(bool checked);
-    void onEncryptionCheckboxChanged(int state);
+    void onEncryptionCheckboxChanged(bool checked);
     void onFormatChanged(int index);
     void onDestinationTypeChanged(int index);
     void onEncryptionMethodChanged(int index);
