@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Read and verify version
         id: version
@@ -35,7 +37,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             build-essential cmake ninja-build pkg-config dpkg-dev \
-            qt6-base-dev qt6-tools-dev-tools \
+            qt6-base-dev qt6-tools-dev qt6-tools-dev-tools \
             libzip-dev libarchive-dev curl
 
       - name: Configure
@@ -74,6 +76,8 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Set up MSYS2 UCRT64
         uses: msys2/setup-msys2@v2
