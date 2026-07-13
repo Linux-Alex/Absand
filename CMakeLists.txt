@@ -1,7 +1,14 @@
 # SPDX-License-Identifier: MPL-2.0
 
 cmake_minimum_required(VERSION 3.20)
-project(Absand VERSION 1.0.0 LANGUAGES C CXX)
+
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" ABSAND_VERSION LIMIT_COUNT 1)
+string(STRIP "${ABSAND_VERSION}" ABSAND_VERSION)
+if(NOT ABSAND_VERSION MATCHES "^[0-9]+\\.[0-9]+\\.[0-9]+$")
+    message(FATAL_ERROR "VERSION must contain a semantic version such as 1.2.3")
+endif()
+
+project(Absand VERSION "${ABSAND_VERSION}" LANGUAGES C CXX)
 
 include(CTest)
 
@@ -16,7 +23,7 @@ set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_VISIBILITY_INLINED_HIDDEN ON)
 
 # Find Qt
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets LinguistTools)
 
 # Find libzip (with AES-256 support)
 find_package(PkgConfig REQUIRED)
@@ -108,8 +115,9 @@ target_compile_options(Absand PRIVATE
     ${LIBZIP_CFLAGS_OTHER}
 )
 
+target_compile_definitions(Absand PRIVATE ABSAND_VERSION="${PROJECT_VERSION}")
+
 # Compile translations and place them beside the application for both Windows and Linux.
-find_program(QT_LRELEASE_EXECUTABLE NAMES lrelease HINTS "${Qt6_DIR}/../../../bin" REQUIRED)
 set(TRANSLATION_TS_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/translations/absand_en_US.ts"
     "${CMAKE_CURRENT_SOURCE_DIR}/translations/absand_sl_SI.ts"
@@ -120,7 +128,7 @@ foreach(TS_FILE IN LISTS TRANSLATION_TS_FILES)
     set(QM_FILE "${CMAKE_CURRENT_BINARY_DIR}/translations/${TS_NAME}.qm")
     add_custom_command(OUTPUT "${QM_FILE}"
         COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/translations"
-        COMMAND "${QT_LRELEASE_EXECUTABLE}" "${TS_FILE}" -qm "${QM_FILE}"
+        COMMAND Qt6::lrelease "${TS_FILE}" -qm "${QM_FILE}"
         DEPENDS "${TS_FILE}"
         VERBATIM)
     list(APPEND TRANSLATION_QM_FILES "${QM_FILE}")
@@ -219,8 +227,13 @@ endif()
 
 # Install main executable
 install(TARGETS Absand RUNTIME DESTINATION bin)
-install(FILES ${TRANSLATION_QM_FILES} DESTINATION bin/translations)
-install(DIRECTORY "${ABSAND_LICENSE_SOURCE_DIR}/" DESTINATION bin/licenses)
+if(WIN32)
+    install(FILES ${TRANSLATION_QM_FILES} DESTINATION bin/translations)
+    install(DIRECTORY "${ABSAND_LICENSE_SOURCE_DIR}/" DESTINATION bin/licenses)
+else()
+    install(FILES ${TRANSLATION_QM_FILES} DESTINATION share/absand/translations)
+    install(DIRECTORY "${ABSAND_LICENSE_SOURCE_DIR}/" DESTINATION share/doc/absand/licenses)
+endif()
 
 if(SEVENZIP_MAKE_EXECUTABLE)
     if(WIN32)
@@ -244,16 +257,8 @@ install(DIRECTORY ${CMAKE_BINARY_DIR}/plugins/
 # PLATFORM-SPECIFIC CONTEXT MENU INTEGRATION
 # ============================================
 
-# Windows: Add to Explorer context menu via registry
-if(WIN32)
-    install(CODE "
-        message(STATUS \"Registering Windows context menu...\")
-        execute_process(COMMAND reg add \"HKCU\\\\Software\\\\Classes\\\\*\\\\shell\\\\Absand\" /ve /t REG_SZ /d \"Send with Absand\" /f)
-        execute_process(COMMAND reg add \"HKCU\\\\Software\\\\Classes\\\\*\\\\shell\\\\Absand\\\\command\" /ve /t REG_SZ /d \"\\\"${CMAKE_INSTALL_PREFIX}/bin/Absand.exe\\\" \\\"%1\\\"\" /f)
-        execute_process(COMMAND reg add \"HKCU\\\\Software\\\\Classes\\\\Folder\\\\shell\\\\Absand\" /ve /t REG_SZ /d \"Send with Absand\" /f)
-        execute_process(COMMAND reg add \"HKCU\\\\Software\\\\Classes\\\\Folder\\\\shell\\\\Absand\\\\command\" /ve /t REG_SZ /d \"\\\"${CMAKE_INSTALL_PREFIX}/bin/Absand.exe\\\" \\\"%1\\\"\" /f)
-    ")
-endif()
+# The Windows installer owns Explorer registration so packaging never mutates
+# the build machine's registry. See packaging/windows/Absand.iss.
 
 # macOS: Add to Finder context menu via Services
 if(APPLE)
@@ -331,6 +336,33 @@ if(UNIX AND NOT APPLE)
         DESTINATION "share/applications"
     )
 endif()
+
+# ============================================
+# RELEASE PACKAGING
+# ============================================
+
+set(CPACK_PACKAGE_NAME "Absand")
+set(CPACK_PACKAGE_VENDOR "Linux-Alex")
+set(CPACK_PACKAGE_CONTACT "Linux-Alex <alex.marinic22@gmail.com>")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
+    "Secure archive creation, transfer, and password delivery")
+set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/Linux-Alex/Absand")
+set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+set(CPACK_STRIP_FILES ON)
+
+if(UNIX AND NOT APPLE)
+    set(CPACK_GENERATOR "DEB")
+    set(CPACK_PACKAGING_INSTALL_PREFIX "/usr")
+    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Linux-Alex <alex.marinic22@gmail.com>")
+    set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
+    set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
+    set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "curl")
+    set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
+endif()
+
+include(CPack)
 
 # ============================================
 # BUILD SUMMARY

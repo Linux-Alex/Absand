@@ -1,0 +1,170 @@
+name: Build installers and publish release
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux-deb:
+    name: Linux DEB
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Read and verify version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(tr -d '[:space:]' < VERSION)
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" != "v${version}" ]]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match VERSION (${version})." >&2
+            exit 1
+          fi
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential cmake ninja-build pkg-config dpkg-dev \
+            qt6-base-dev qt6-tools-dev-tools \
+            libzip-dev libarchive-dev curl
+
+      - name: Configure
+        run: >-
+          cmake -S . -B build-linux -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_INSTALL_PREFIX=/usr
+
+      - name: Build and test
+        run: |
+          cmake --build build-linux --parallel 4
+          ctest --test-dir build-linux --output-on-failure
+
+      - name: Build DEB package
+        run: |
+          set -euo pipefail
+          mkdir -p release-artifacts
+          cpack --config build-linux/CPackConfig.cmake -G DEB -B release-artifacts
+          package=$(find release-artifacts -maxdepth 1 -type f -name '*.deb' -print -quit)
+          test -n "$package"
+          output="release-artifacts/Absand-${{ steps.version.outputs.value }}-linux-amd64.deb"
+          if [[ "$package" != "$output" ]]; then mv "$package" "$output"; fi
+          dpkg-deb --info "$output"
+          dpkg-deb --contents "$output"
+
+      - name: Upload Linux installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: absand-linux-deb
+          path: release-artifacts/*.deb
+          if-no-files-found: error
+
+  windows-exe:
+    name: Windows installer
+    runs-on: windows-2025
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up MSYS2 UCRT64
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            make
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-qt6-base
+            mingw-w64-ucrt-x86_64-qt6-tools
+            mingw-w64-ucrt-x86_64-libzip
+            mingw-w64-ucrt-x86_64-libarchive
+            mingw-w64-ucrt-x86_64-curl
+            mingw-w64-ucrt-x86_64-ca-certificates
+
+      - name: Read and verify version
+        id: version
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          version=$(tr -d '[:space:]' < VERSION)
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" != "v${version}" ]]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match VERSION (${version})." >&2
+            exit 1
+          fi
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Configure, build, test, and stage
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          cmake -S . -B build-windows -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$PWD/stage/Absand"
+          cmake --build build-windows --parallel 4
+          ctest --test-dir build-windows --output-on-failure
+          cmake --install build-windows
+          bash packaging/windows/bundle-runtime.sh "$PWD/stage/Absand/bin"
+
+      - name: Build EXE installer
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $compiler = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $compiler)) {
+            choco install innosetup -y --no-progress
+          }
+          New-Item -ItemType Directory -Force release-artifacts | Out-Null
+          $sourceDir = (Resolve-Path "stage/Absand/bin").Path
+          $outputDir = (Resolve-Path "release-artifacts").Path
+          & $compiler "/DSourceDir=$sourceDir" "/DAppVersion=${{ steps.version.outputs.value }}" "/DOutputDir=$outputDir" "packaging/windows/Absand.iss"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Get-ChildItem release-artifacts
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: absand-windows-exe
+          path: release-artifacts/*.exe
+          if-no-files-found: error
+
+  publish-release:
+    name: Publish GitHub release
+    if: github.ref_type == 'tag'
+    needs: [linux-deb, windows-exe]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download installers
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+          merge-multiple: true
+
+      - name: Create or update GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          (cd release-artifacts && sha256sum * > SHA256SUMS.txt)
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" release-artifacts/* --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" release-artifacts/* \
+              --title "Absand $GITHUB_REF_NAME" \
+              --generate-notes \
+              --verify-tag
+          fi

@@ -1,5 +1,7 @@
 # Absand
 
+[![Build installers and publish release](https://github.com/Linux-Alex/Absand/actions/workflows/release.yml/badge.svg)](https://github.com/Linux-Alex/Absand/actions/workflows/release.yml)
+
 Absand is a cross-platform Qt desktop application for creating encrypted ZIP and 7z archives, transferring them to configurable destinations, and delivering the archive password through a separate channel.
 
 ## Features
@@ -50,6 +52,38 @@ Treat the webhook URL as a secret. This implementation does not require an Entra
 - `libs/bit7z/` and `libs/7zip/` — bundled archive dependencies
 - `tests/` — plugin integration tests
 
+## Versions and automatic releases
+
+The current application and package version is stored in the root [`VERSION`](VERSION) file. Absand uses semantic versions in `MAJOR.MINOR.PATCH` form, such as `1.2.3`. CMake reads this file for the application version and Linux package metadata.
+
+Pushing a matching tag such as `v1.2.3` starts the GitHub Actions release workflow. It builds and tests both platforms, produces these installers, generates SHA-256 checksums, and publishes them on the GitHub Releases page:
+
+```text
+Absand-1.2.3-linux-amd64.deb
+Absand-1.2.3-windows-x64-setup.exe
+SHA256SUMS.txt
+```
+
+To publish a new release, replace `1.0.1` below with the version you want and run the complete block from the repository root:
+
+```bash
+set -e
+
+./scripts/set-version.sh 1.0.1
+
+git add VERSION CMakeLists.txt src/main.cpp README.md \
+  .github/workflows/release.yml packaging scripts
+git commit -m "chore: release Absand 1.0.1"
+git tag -a v1.0.1 -m "Absand 1.0.1"
+
+git push origin main
+git push origin v1.0.1
+```
+
+The tag must exactly equal `v` followed by the content of `VERSION`; a mismatch intentionally fails the release. You can test installer generation without publishing a release by opening **Actions → Build installers and publish release → Run workflow** on GitHub. Manually triggered runs keep both installers as workflow artifacts.
+
+The generated Windows installer is not code-signed. Windows SmartScreen may therefore warn users until you add a trusted code-signing certificate to the release workflow.
+
 ## Linux: build, run, and deploy
 
 The commands below target Ubuntu/Debian and use the distribution's Qt libraries. Open a terminal in the Absand repository, then copy and paste the complete block.
@@ -65,6 +99,7 @@ sudo apt install -y \
   cmake \
   ninja-build \
   pkg-config \
+  dpkg-dev \
   qt6-base-dev \
   qt6-tools-dev-tools \
   libzip-dev \
@@ -97,6 +132,38 @@ To archive files immediately from the command line:
 
 ```bash
 /usr/local/bin/Absand "$HOME/Documents/file-one.pdf" "$HOME/Documents/folder-to-archive"
+```
+
+### Create and install a Debian package locally
+
+After installing the dependencies above, this complete block builds the same `.deb` format as GitHub Actions and installs it with APT:
+
+```bash
+set -e
+
+version="$(tr -d '[:space:]' < VERSION)"
+rm -rf build-deb release-artifacts
+
+cmake -S . -B build-deb -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_INSTALL_PREFIX=/usr
+cmake --build build-deb --parallel "$(nproc)"
+ctest --test-dir build-deb --output-on-failure
+
+mkdir -p release-artifacts
+cpack --config build-deb/CPackConfig.cmake -G DEB -B release-artifacts
+package="$(find release-artifacts -maxdepth 1 -type f -name '*.deb' -print -quit)"
+output="release-artifacts/Absand-${version}-linux-amd64.deb"
+mv "$package" "$output"
+
+sudo apt install -y "./$output"
+Absand
+```
+
+Remove the packaged installation later with:
+
+```bash
+sudo apt remove absand
 ```
 
 ### Upgrade an existing installation
@@ -159,7 +226,10 @@ done < build-release/install_manifest.system.txt
 
 sudo rmdir --ignore-fail-on-non-empty \
   /usr/local/bin/licenses \
-  /usr/local/bin/translations \
+  /usr/local/share/absand/translations \
+  /usr/local/share/absand \
+  /usr/local/share/doc/absand/licenses \
+  /usr/local/share/doc/absand \
   /usr/local/bin/plugins/archive \
   /usr/local/bin/plugins/destination \
   /usr/local/bin/plugins/send \
@@ -202,18 +272,17 @@ To stage a distributable directory:
 
 ```bash
 cmake --install build --prefix "$PWD/deploy"
-/ucrt64/bin/windeployqt.exe --release --compiler-runtime deploy/bin/Absand.exe
-cp /ucrt64/bin/libzip.dll deploy/bin/
+bash packaging/windows/bundle-runtime.sh "$PWD/deploy/bin"
 ```
 
-Use `ldd deploy/bin/Absand.exe` and `ldd deploy/bin/plugins/*/*.dll` from the same shell to identify any remaining MSYS2 runtime DLLs (commonly compression, TLS, or curl dependencies) and copy them into `deploy/bin`. Confirm that these remain present:
+The bundling script runs `windeployqt`, copies curl and its transitive MSYS2 DLL dependencies, and adds the CA certificate bundle. Confirm that these remain present:
 
 - `deploy/bin/Absand.exe`
 - `deploy/bin/7z.dll`
 - `deploy/bin/plugins/archive/*.dll`, `plugins/destination/*.dll`, and `plugins/send/*.dll`
 - `deploy/bin/translations/absand_sl_SI.qm`
 
-Run `deploy/bin/Absand.exe` outside MSYS2 as the final smoke test. CMake installation registers the “Send with Absand” Explorer context menu for the current user. An installer can package the whole `deploy/bin` tree; it should remove those registry entries during uninstall.
+Run `deploy/bin/Absand.exe` outside MSYS2 as the final smoke test. The generated Inno Setup installer registers the “Send with Absand” Explorer context menu for the current user and removes those entries during uninstall.
 
 ## Updating translations
 

@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
     QApplication app(argc, argv);
 
     app.setApplicationName("Absand");
-    app.setApplicationVersion("1.0.0");
+    app.setApplicationVersion(QStringLiteral(ABSAND_VERSION));
     app.setOrganizationName("Absand");
 
     QTranslator translator;
