@@ -1,0 +1,116 @@
+# -----------------------------------------------------------------------------
+# Absand — Qt 6 / CMake
+# Keep source files, CMakeLists.txt files, plugin JSON manifests, and *.ts
+# translation catalogs in Git. Ignore only generated or machine-local content.
+# -----------------------------------------------------------------------------
+
+# CMake build trees and generated files
+/build/
+/build-*/
+/cmake-build-*/
+/out/
+/dist/
+/deploy/
+/AppDir/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+Testing/
+install_manifest.txt
+compile_commands.json
+CPackConfig.cmake
+CPackSourceConfig.cmake
+_deps/
+
+# Qt generated files
+*_autogen/
+.qt/
+.qmake.cache
+.qmake.stash
+.qmlls.ini
+moc_*.cpp
+qrc_*.cpp
+ui_*.h
+*_pch.h.cpp
+*_resource.rc
+*.moc
+*.qm
+*.prl
+
+# Compiled objects, libraries, executables, and debug symbols
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.so.*
+*.dylib
+*.dll
+*.exe
+*.app
+*.pdb
+*.ilk
+*.idb
+*.dSYM/
+*.debug
+*.core
+
+# Qt Creator and other IDE/editor state
+*.pro.user
+*.pro.user.*
+*.qbs.user
+*.qbs.user.*
+CMakeLists.txt.user
+CMakeLists.txt.user.*
+CMakeUserPresets.json
+/.qtcreator/
+/.idea/
+/.vscode/
+/.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.VC.db
+*.VC.opendb
+
+# Codex/agent workspace metadata
+/.agents/
+/.codex/
+
+# Local credentials and environment overrides
+/.env
+/.env.*
+!/.env.example
+/.absand/
+/credentials/
+/secrets/
+
+# Logs, caches, temporary files, and test leftovers
+*.log
+*.tmp
+*.temp
+*.bak
+*.autosave
+*.orig
+*.rej
+*.swp
+*.swo
+*~
+.#*
+*.*#
+.cache/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+tags
+
+# Operating-system metadata
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+Desktop.ini
+.directory
+$RECYCLE.BIN/

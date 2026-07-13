@@ -1,0 +1,9 @@
+{
+  "name": "Telegram",
+  "version": "1.0.0",
+  "description": "Send the archive password with a Telegram bot",
+  "author": "Absand Team",
+  "license": "MPL-2.0",
+  "channel": "telegram",
+  "requiresConfiguration": true
+}

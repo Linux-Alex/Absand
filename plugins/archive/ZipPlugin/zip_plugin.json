@@ -1,0 +1,10 @@
+{
+    "name": "ZIP Archive",
+    "version": "1.0.0",
+    "description": "ZIP compression with AES-256 encryption support",
+    "author": "Absand Team",
+    "license": "MPL-2.0",
+    "formats": ["zip"],
+    "supportsPassword": true,
+    "encryptionMethods": ["None", "AES-256", "Traditional PKWARE"]
+}

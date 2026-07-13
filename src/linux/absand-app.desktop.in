@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: MPL-2.0
+
+[Desktop Entry]
+Type=Application
+Name=Absand
+Comment=Open and create encrypted archives
+Exec=Absand %F
+Icon=archive-encrypted
+Terminal=false
+Categories=Utility;Archiving;Qt;
+MimeType=application/zip;application/x-7z-compressed;

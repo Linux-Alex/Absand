@@ -1,0 +1,7 @@
+{
+  "name": "FTPDestinationPlugin",
+  "version": "1.0.0",
+  "description": "Upload archives to FTP servers",
+  "author": "Absand Team",
+  "license": "MPL-2.0"
+}

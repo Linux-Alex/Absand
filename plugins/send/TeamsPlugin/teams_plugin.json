@@ -1,0 +1,9 @@
+{
+  "name": "Microsoft Teams",
+  "version": "1.0.0",
+  "description": "Send the archive password to a Teams workflow webhook",
+  "author": "Absand Team",
+  "license": "MPL-2.0",
+  "channel": "teams",
+  "requiresConfiguration": true
+}

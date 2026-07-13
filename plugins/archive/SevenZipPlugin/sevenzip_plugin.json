@@ -1,0 +1,10 @@
+{
+    "name": "7z Archive",
+    "version": "1.0.0",
+    "description": "7z archive format (unencrypted only)",
+    "author": "Absand Team",
+    "license": "MPL-2.0",
+    "formats": ["7z"],
+    "supportsPassword": false,
+    "encryptionMethods": ["None"]
+}

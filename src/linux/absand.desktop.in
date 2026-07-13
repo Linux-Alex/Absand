@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: MPL-2.0
+
+[Desktop Entry]
+Type=Service
+ServiceTypes=KonqPopupMenu/Plugin
+MimeType=all/all;inode/directory;
+Actions=sendWithAbsand;
+X-KDE-Priority=TopLevel
+X-KDE-StartupNotify=true
+
+[Desktop Action sendWithAbsand]
+Name=Send with Absand
+Name[en]=Send with Absand
+Name[de]=Mit Absand senden
+Name[fr]=Envoyer avec Absand
+Name[es]=Enviar con Absand
+Icon=archive-encrypted
+Exec=@CMAKE_INSTALL_PREFIX@/bin/Absand %F

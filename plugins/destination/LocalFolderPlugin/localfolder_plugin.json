@@ -1,0 +1,7 @@
+{
+  "name": "LocalFolderPlugin",
+  "version": "1.0.0",
+  "description": "Save archives to a local folder",
+  "author": "Absand Team",
+  "license": "MPL-2.0"
+}

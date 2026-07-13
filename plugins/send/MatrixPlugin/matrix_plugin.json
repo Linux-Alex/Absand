@@ -1,0 +1,9 @@
+{
+  "name": "Matrix",
+  "version": "1.0.0",
+  "description": "Send the archive password to a Matrix room",
+  "author": "Absand Team",
+  "license": "MPL-2.0",
+  "channel": "matrix",
+  "requiresConfiguration": true
+}
