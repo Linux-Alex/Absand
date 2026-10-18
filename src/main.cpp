@@ -92,6 +92,7 @@ bool loadLanguage(QApplication& app, QTranslator& translator, const QString& loc
     return false;
 }
 
+#ifdef ABSAND_KIRIGAMI_FRONTEND
 /// True when a QML module (directory form, e.g. "org/kde/desktop") exists in one
 /// of the import directories Qt uses, including the deployment directory.
 bool qmlModuleAvailable(const QString& modulePath)
@@ -109,6 +110,7 @@ bool qmlModuleAvailable(const QString& modulePath)
     }
     return false;
 }
+#endif // ABSAND_KIRIGAMI_FRONTEND
 
 QStringList fileArguments(const QStringList& arguments)
 {
