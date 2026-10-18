@@ -41,21 +41,13 @@ public:
     bool requiresConfiguration() const override { return false; }
     QVariantMap defaultConfiguration() const override { return QVariantMap(); }
     bool validateConfiguration(const QVariantMap& config, QString* errorMessage = nullptr) const override {
-        Q_UNUSED(config); 
+        Q_UNUSED(config);
         Q_UNUSED(errorMessage);
-        return true; 
+        return true;
     }
     QWidget* createConfigWidget(QWidget* parent = nullptr) override {
         Q_UNUSED(parent);
         return nullptr;
-    }
-    void loadConfigurationWidget(QWidget* widget, const QVariantMap& config) const override {
-        Q_UNUSED(widget);
-        Q_UNUSED(config);
-    }
-    QVariantMap saveConfigurationWidget(QWidget* widget) const override {
-        Q_UNUSED(widget);
-        return {};
     }
 };
 

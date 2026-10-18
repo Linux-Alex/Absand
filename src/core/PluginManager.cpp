@@ -96,6 +96,7 @@ bool PluginManager::loadPlugin(const QString& filePath)
     if (archivePlugin) {
         m_archivePlugins.append(archivePlugin);
         m_loaders.append(loader);
+        m_loaderForPlugin.insert(instance, loader);
         qDebug() << "Loaded archive plugin:" << archivePlugin->name();
         emit pluginLoaded(archivePlugin->name());
         return true;
@@ -106,6 +107,7 @@ bool PluginManager::loadPlugin(const QString& filePath)
     if (sendPlugin) {
         m_sendPlugins.append(sendPlugin);
         m_loaders.append(loader);
+        m_loaderForPlugin.insert(instance, loader);
         qDebug() << "Loaded send plugin:" << sendPlugin->name();
         emit pluginLoaded(sendPlugin->name());
         return true;
@@ -115,6 +117,7 @@ bool PluginManager::loadPlugin(const QString& filePath)
     if (destinationPlugin) {
         m_destinationPlugins.append(destinationPlugin);
         m_loaders.append(loader);
+        m_loaderForPlugin.insert(instance, loader);
         qDebug() << "Loaded destination plugin:" << destinationPlugin->name();
         emit pluginLoaded(destinationPlugin->name());
         return true;
@@ -125,6 +128,7 @@ bool PluginManager::loadPlugin(const QString& filePath)
     if (plugin) {
         m_plugins.append(plugin);
         m_loaders.append(loader);
+        m_loaderForPlugin.insert(instance, loader);
         qDebug() << "Loaded plugin:" << plugin->name();
         emit pluginLoaded(plugin->name());
         return true;
@@ -164,12 +168,10 @@ QVariantMap PluginManager::getPluginMetadata(PluginInterface* plugin) const
         return QVariantMap();
     }
     
-    int index = m_plugins.indexOf(plugin);
-    if (index == -1 || index >= m_loaders.size()) {
-        return QVariantMap();
-    }
-    
-    QPluginLoader* loader = m_loaders[index];
+    // A plugin object is not necessarily stored at the same index as its loader
+    // in m_loaders (that vector follows load order across all plugin kinds), so
+    // the association has to be looked up instead of indexed.
+    QPluginLoader* loader = m_loaderForPlugin.value(dynamic_cast<QObject*>(plugin), nullptr);
     if (!loader) {
         return QVariantMap();
     }
@@ -208,7 +210,6 @@ QStringList PluginManager::findPluginDirectories() const
     
     #ifdef Q_OS_WIN
         dirs.append(QCoreApplication::applicationDirPath() + "/../plugins");
-        dirs.append("C:/Program Files/Absand/plugins");
     #elif defined(Q_OS_LINUX)
         dirs.append("/usr/lib/absand/plugins");
         dirs.append("/usr/local/lib/absand/plugins");

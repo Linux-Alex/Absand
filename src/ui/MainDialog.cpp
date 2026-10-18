@@ -12,6 +12,7 @@
 #include "interfaces/DestinationPluginInterface.h"
 #include "interfaces/SendPluginInterface.h"
 #include <zip.h>
+#include <QDesktopServices>
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QDateTime>
@@ -34,14 +35,66 @@
 #include <QPushButton>
 #include <QTabWidget>
 #include <QEvent>
+#include <QProgressDialog>
+#include <QStandardPaths>
+#include <QUrl>
+#include <QCloseEvent>
 
-#ifndef ZIP_EM_AES_256
-#define ZIP_EM_AES_256 0x6601
+namespace {
+
+QString storedRecipient(UserConfig::ConfigKind kind, const QString& pluginKey, const QString& fieldKey)
+{
+    const QString profile = UserConfig::activeProfile(kind, pluginKey);
+    return UserConfig::loadProfile(kind, pluginKey, profile).value(fieldKey).toString();
+}
+
+void storeRecipient(UserConfig::ConfigKind kind, const QString& pluginKey,
+                    const QString& fieldKey, const QString& value)
+{
+    const QString profile = UserConfig::activeProfile(kind, pluginKey);
+    QVariantMap config = UserConfig::loadProfile(kind, pluginKey, profile);
+    if (config.value(fieldKey).toString() == value) {
+        return;
+    }
+    config.insert(fieldKey, value);
+    UserConfig::saveProfile(kind, pluginKey, profile, config);
+}
+
+// Opens the platform's file manager on the folder that holds the archive. The
+// previous implementation always launched "dolphin", which silently did nothing
+// on Windows (and on Linux systems without Dolphin).
+bool revealInFileManager(const QString& filePath)
+{
+    const QFileInfo info(filePath);
+    const QString folder = info.absolutePath();
+
+#ifdef Q_OS_WIN
+    if (QProcess::startDetached(QStringLiteral("explorer.exe"),
+                                { QStringLiteral("/select,"), QDir::toNativeSeparators(info.absoluteFilePath()) })) {
+        return true;
+    }
+#elif defined(Q_OS_MACOS)
+    if (QProcess::startDetached(QStringLiteral("open"),
+                                { QStringLiteral("-R"), info.absoluteFilePath() })) {
+        return true;
+    }
+#else
+    const QStringList fileManagers{
+        QStringLiteral("dolphin"), QStringLiteral("nautilus"), QStringLiteral("nemo"),
+        QStringLiteral("thunar"), QStringLiteral("pcmanfm"), QStringLiteral("caja")
+    };
+    for (const QString& candidate : fileManagers) {
+        if (!QStandardPaths::findExecutable(candidate).isEmpty()
+            && QProcess::startDetached(candidate, { folder })) {
+            return true;
+        }
+    }
 #endif
 
-#ifndef ZIP_EM_TRAD_PKWARE
-#define ZIP_EM_TRAD_PKWARE 0x0001
-#endif
+    return QDesktopServices::openUrl(QUrl::fromLocalFile(folder));
+}
+
+} // namespace
 
 MainDialog::MainDialog(const QStringList& inputPaths, QWidget* parent)
     : QDialog(parent)
@@ -67,7 +120,7 @@ MainDialog::~MainDialog() = default;
 
 void MainDialog::setupUI()
 {
-    setWindowTitle("Absand - Secure Archive Sender");
+    setWindowTitle(tr("Absand - Secure Archive Sender"));
 
     ui->inputListWidget->setSelectionMode(QAbstractItemView::ExtendedSelection);
     ui->inputListWidget->setAlternatingRowColors(true);
@@ -75,7 +128,7 @@ void MainDialog::setupUI()
     ui->inputListWidget->setDragEnabled(false);
     ui->inputListWidget->setDropIndicatorShown(true);
     ui->inputListWidget->setDefaultDropAction(Qt::CopyAction);
-    ui->inputListWidget->setToolTip("Drop files or folders here");
+    ui->inputListWidget->setToolTip(tr("Drop files or folders here"));
 
     connect(ui->inputListWidget, &FileDropListWidget::filesDropped,
             this, &MainDialog::addInputPaths);
@@ -99,7 +152,7 @@ void MainDialog::setupUI()
     }
     
     m_selectedDestination = currentDir;
-    ui->destinationPathEdit->setText(currentDir + "/" + getDefaultFileName());
+    refreshDestinationPath();
     
     updateArchiveInfo();
 
@@ -184,9 +237,37 @@ void MainDialog::setupSendControls()
         m_sendCombo->addItem(plugin->name(), QVariant::fromValue(dynamic_cast<QObject*>(plugin)));
     }
     m_sendSettingsButton = new QPushButton(tr("Configure channels..."), ui->passwordGroupBox);
-    row->addWidget(m_sendLabel); row->addWidget(m_sendCombo, 1); row->addWidget(m_sendSettingsButton);
+    row->addWidget(m_sendLabel);
+    row->addWidget(m_sendCombo, 1);
+    row->addWidget(m_sendSettingsButton);
     ui->verticalLayout_2->addLayout(row);
+
+    // Second row: which profile of the selected channel is used, and where the
+    // password goes. Recipients live in the main window so a different address,
+    // number, chat, or topic can be used without opening the settings.
+    auto* detailRow = new QHBoxLayout;
+    m_sendProfileLabel = new QLabel(tr("Profile:"), ui->passwordGroupBox);
+    m_sendProfileCombo = new QComboBox(ui->passwordGroupBox);
+    m_sendProfileCombo->setMinimumWidth(120);
+    m_sendRecipientLabel = new QLabel(tr("Recipient:"), ui->passwordGroupBox);
+    m_sendRecipientEdit = new QLineEdit(ui->passwordGroupBox);
+    m_sendRecipientEdit->setClearButtonEnabled(true);
+
+    detailRow->addWidget(m_sendProfileLabel);
+    detailRow->addWidget(m_sendProfileCombo);
+    detailRow->addSpacing(8);
+    detailRow->addWidget(m_sendRecipientLabel);
+    detailRow->addWidget(m_sendRecipientEdit, 1);
+    ui->verticalLayout_2->addLayout(detailRow);
+
     connect(m_sendSettingsButton, &QPushButton::clicked, this, &MainDialog::onOpenSendSettingsClicked);
+    connect(m_sendCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &MainDialog::onSendChannelChanged);
+    connect(m_sendProfileCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &MainDialog::onSendProfileChanged);
+    connect(m_sendRecipientEdit, &QLineEdit::editingFinished, this, &MainDialog::storeSendRecipient);
+
+    updateSendChannelControls();
 }
 
 void MainDialog::changeEvent(QEvent* event)
@@ -200,6 +281,8 @@ void MainDialog::changeEvent(QEvent* event)
         if (m_destinationSettingsButton) m_destinationSettingsButton->setText(tr("Configure..."));
         if (m_sendLabel) m_sendLabel->setText(tr("Send password via:"));
         if (m_sendSettingsButton) m_sendSettingsButton->setText(tr("Configure channels..."));
+        if (m_sendProfileLabel) m_sendProfileLabel->setText(tr("Profile:"));
+        if (m_destinationProfileLabel) m_destinationProfileLabel->setText(tr("Profile:"));
         if (m_languageCombo) {
             const QSignalBlocker blocker(m_languageCombo);
             m_languageCombo->setItemText(0, tr("English"));
@@ -208,6 +291,8 @@ void MainDialog::changeEvent(QEvent* event)
         if (m_sendCombo) m_sendCombo->setItemText(0, tr("Do not send"));
         updateInputSummary();
         updateArchiveInfo();
+        updateSendChannelControls();
+        updateDestinationProfileControls();
         updateDestinationSelection();
     }
     QDialog::changeEvent(event);
@@ -220,10 +305,30 @@ void MainDialog::setupDestinationControls()
 
     if (auto* layout = ui->destinationGroupBox->findChild<QHBoxLayout*>(QStringLiteral("horizontalLayout_3"))) {
         m_destinationSettingsButton = new QPushButton(tr("Configure..."), ui->destinationGroupBox);
+        m_destinationProfileLabel = new QLabel(tr("Profile:"), ui->destinationGroupBox);
+        m_destinationProfileCombo = new QComboBox(ui->destinationGroupBox);
+        m_destinationProfileCombo->setMinimumWidth(120);
+        const int insertAt = layout->indexOf(ui->browseButton);
+        layout->insertWidget(insertAt, m_destinationProfileLabel);
+        layout->insertWidget(insertAt + 1, m_destinationProfileCombo);
         layout->addWidget(m_destinationSettingsButton);
         connect(m_destinationSettingsButton, &QPushButton::clicked,
                 this, &MainDialog::onOpenDestinationSettingsClicked);
+
+        // Where the archive is delivered: folder, share, remote path or address.
+        auto* targetRow = new QHBoxLayout;
+        m_destinationRecipientLabel = new QLabel(tr("Target:"), ui->destinationGroupBox);
+        m_destinationRecipientEdit = new QLineEdit(ui->destinationGroupBox);
+        m_destinationRecipientEdit->setClearButtonEnabled(true);
+        targetRow->addWidget(m_destinationRecipientLabel);
+        targetRow->addWidget(m_destinationRecipientEdit, 1);
+        ui->verticalLayout_3->insertLayout(ui->verticalLayout_3->count() - 1, targetRow);
     }
+
+    connect(m_destinationProfileCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &MainDialog::onDestinationProfileChanged);
+    connect(m_destinationRecipientEdit, &QLineEdit::editingFinished,
+            this, &MainDialog::storeDestinationRecipient);
 }
 
 void MainDialog::loadArchivePlugins()
@@ -289,15 +394,22 @@ void MainDialog::loadDestinationPlugins()
 
     if (ui->destTypeCombo->count() == 0) {
         ui->destTypeCombo->addItem(tr("Local Folder"), QVariant::fromValue(static_cast<QObject*>(nullptr)));
+    } else {
+        // A plain local folder needs no credentials, so it is the sane default
+        // even though the combo lists plugins alphabetically.
+        for (int index = 0; index < ui->destTypeCombo->count(); ++index) {
+            auto* candidate = qobject_cast<DestinationPluginInterface*>(
+                ui->destTypeCombo->itemData(index).value<QObject*>());
+            if (candidate && candidate->channelName() == QStringLiteral("local_folder")) {
+                const QSignalBlocker blocker(ui->destTypeCombo);
+                ui->destTypeCombo->setCurrentIndex(index);
+                break;
+            }
+        }
     }
 
+    updateDestinationProfileControls();
     updateDestinationSelection();
-}
-
-void MainDialog::onEncryptionMethodChanged(int index)
-{
-    Q_UNUSED(index);
-    // Encryption method selection logic
 }
 
 void MainDialog::onOpenArchiveBrowserClicked()
@@ -308,11 +420,13 @@ void MainDialog::onOpenArchiveBrowserClicked()
 
 void MainDialog::onOpenDestinationSettingsClicked()
 {
+    storeDestinationRecipient();
     DestinationSettingsDialog dialog(&m_pluginManager, this);
     if (dialog.exec() == QDialog::Accepted) {
         refreshDestinationPlugins();
-        updateDestinationSelection();
     }
+    updateDestinationProfileControls();
+    updateDestinationSelection();
 }
 
 void MainDialog::onThemeChanged(int index)
@@ -336,8 +450,11 @@ void MainDialog::onLanguageChanged(int index)
 
 void MainDialog::onOpenSendSettingsClicked()
 {
+    storeSendRecipient();
     SendSettingsDialog dialog(&m_pluginManager, this);
     dialog.exec();
+    // Profiles may have been added, renamed, or removed.
+    updateSendChannelControls();
 }
 
 void MainDialog::updateArchiveInfo()
@@ -388,7 +505,7 @@ void MainDialog::refreshInputList()
 
     updateInputSummary();
     updateArchiveInfo();
-    ui->destinationPathEdit->setText(m_selectedDestination + "/" + getDefaultFileName());
+    refreshDestinationPath();
     ui->archiveButton->setEnabled(!m_inputPaths.isEmpty());
 }
 
@@ -417,7 +534,7 @@ void MainDialog::addInputPaths(const QStringList& paths)
 
 void MainDialog::onAddFilesClicked()
 {
-    QStringList files = QFileDialog::getOpenFileNames(this, "Select Files to Add");
+    QStringList files = QFileDialog::getOpenFileNames(this, tr("Select Files to Add"));
     addInputPaths(files);
 }
 
@@ -498,10 +615,11 @@ QString MainDialog::getDefaultFileName() const
 
 void MainDialog::onBrowseDestinationClicked()
 {
-    QString dir = QFileDialog::getExistingDirectory(this, tr("Select Destination Folder"), m_selectedDestination);
+    const QString dir = QFileDialog::getExistingDirectory(this, tr("Select Destination Folder"), m_selectedDestination);
     if (!dir.isEmpty()) {
         m_selectedDestination = dir;
-        ui->destinationPathEdit->setText(dir + "/" + getDefaultFileName());
+        m_generatedDestinationPath.clear();
+        refreshDestinationPath();
     }
 }
 
@@ -519,6 +637,20 @@ void MainDialog::onFormatChanged(int index)
     updateEncryptionControls();
 }
 
+void MainDialog::refreshDestinationPath()
+{
+    // Only replace the path when it is still the generated default; otherwise a
+    // file name typed by the user would be discarded whenever files are added or
+    // removed from the list.
+    const QString current = ui->destinationPathEdit->text().trimmed();
+    if (!current.isEmpty() && current != m_generatedDestinationPath) {
+        return;
+    }
+
+    m_generatedDestinationPath = m_selectedDestination + '/' + getDefaultFileName();
+    ui->destinationPathEdit->setText(m_generatedDestinationPath);
+}
+
 void MainDialog::updateDestinationPathForCurrentFormat()
 {
     const ArchivePluginInterface* plugin = ui->formatCombo->currentData().value<ArchivePluginInterface*>();
@@ -526,7 +658,7 @@ void MainDialog::updateDestinationPathForCurrentFormat()
     QString currentPath = ui->destinationPathEdit->text().trimmed();
 
     if (currentPath.isEmpty()) {
-        ui->destinationPathEdit->setText(m_selectedDestination + "/" + getDefaultFileName());
+        refreshDestinationPath();
         return;
     }
 
@@ -552,15 +684,107 @@ DestinationPluginInterface* MainDialog::currentDestinationPlugin() const
 
 QVariantMap MainDialog::currentDestinationConfig() const
 {
-    if (auto* plugin = currentDestinationPlugin()) {
-        QVariantMap config = plugin->defaultConfiguration();
-        const QVariantMap stored = UserConfig::loadDestinationConfig(plugin->configKey());
-        for (auto it = stored.constBegin(); it != stored.constEnd(); ++it) {
-            config[it.key()] = it.value();
-        }
-        return config;
+    auto* plugin = currentDestinationPlugin();
+    if (!plugin) {
+        return {};
     }
-    return {};
+
+    QVariantMap config = plugin->defaultConfiguration();
+    const QVariantMap stored = UserConfig::loadDestinationConfig(plugin->configKey());
+    for (auto it = stored.constBegin(); it != stored.constEnd(); ++it) {
+        config[it.key()] = it.value();
+    }
+
+    // The target is edited in the main window and wins over the stored value.
+    const ConfigSchema schema = plugin->configSchema();
+    const ConfigField* target = schemaRecipientField(schema);
+    if (target && m_destinationRecipientEdit) {
+        const QString text = m_destinationRecipientEdit->text().trimmed();
+        if (!text.isEmpty()) {
+            config.insert(target->key, text);
+        }
+    }
+
+    return config;
+}
+
+void MainDialog::onDestinationProfileChanged(int index)
+{
+    auto* plugin = currentDestinationPlugin();
+    if (!plugin || !m_destinationProfileCombo || index < 0) {
+        return;
+    }
+
+    const QString chosen = m_destinationProfileCombo->itemText(index);
+    if (chosen.isEmpty()) {
+        return;
+    }
+
+    storeDestinationRecipient();
+    UserConfig::setActiveProfile(UserConfig::ConfigKind::Destination, plugin->configKey(), chosen);
+    updateDestinationProfileControls();
+    updateDestinationSelection();
+}
+
+void MainDialog::storeDestinationRecipient()
+{
+    auto* plugin = currentDestinationPlugin();
+    if (!plugin || !m_destinationRecipientEdit) {
+        return;
+    }
+
+    const ConfigSchema schema = plugin->configSchema();
+    const ConfigField* target = schemaRecipientField(schema);
+    if (!target) {
+        return;
+    }
+
+    storeRecipient(UserConfig::ConfigKind::Destination, plugin->configKey(), target->key,
+                   m_destinationRecipientEdit->text().trimmed());
+}
+
+void MainDialog::updateDestinationProfileControls()
+{
+    auto* plugin = currentDestinationPlugin();
+
+    if (m_destinationProfileLabel) {
+        m_destinationProfileLabel->setVisible(plugin != nullptr);
+    }
+    if (m_destinationProfileCombo) {
+        const QSignalBlocker blocker(m_destinationProfileCombo);
+        m_destinationProfileCombo->setVisible(plugin != nullptr);
+        m_destinationProfileCombo->clear();
+        if (plugin) {
+            m_destinationProfileCombo->addItems(
+                UserConfig::profileNames(UserConfig::ConfigKind::Destination, plugin->configKey()));
+            const QString active =
+                UserConfig::activeProfile(UserConfig::ConfigKind::Destination, plugin->configKey());
+            const int index = m_destinationProfileCombo->findText(active);
+            m_destinationProfileCombo->setCurrentIndex(index >= 0 ? index : 0);
+        }
+    }
+
+    const ConfigSchema schema = plugin ? plugin->configSchema() : ConfigSchema();
+    const ConfigField* target = schemaRecipientField(schema);
+
+    if (m_destinationRecipientLabel) {
+        m_destinationRecipientLabel->setVisible(target != nullptr);
+        if (target) {
+            m_destinationRecipientLabel->setText(target->label.isEmpty() ? tr("Target:")
+                                                                       : target->label + QLatin1Char(':'));
+        }
+    }
+    if (m_destinationRecipientEdit) {
+        m_destinationRecipientEdit->setVisible(target != nullptr);
+        if (target) {
+            m_destinationRecipientEdit->setPlaceholderText(target->placeholder);
+            m_destinationRecipientEdit->setToolTip(target->help.isEmpty() ? target->label : target->help);
+            m_destinationRecipientEdit->setText(
+                storedRecipient(UserConfig::ConfigKind::Destination, plugin->configKey(), target->key));
+        } else {
+            m_destinationRecipientEdit->clear();
+        }
+    }
 }
 
 void MainDialog::updateDestinationSelection()
@@ -572,7 +796,8 @@ void MainDialog::updateDestinationSelection()
         if (m_selectedDestination.isEmpty()) {
             m_selectedDestination = QDir::homePath();
         }
-        ui->destinationPathEdit->setText(m_selectedDestination + "/" + getDefaultFileName());
+        m_generatedDestinationPath.clear();
+        refreshDestinationPath();
         ui->browseButton->setEnabled(true);
         if (m_destinationSettingsButton) {
             m_destinationSettingsButton->setEnabled(true);
@@ -614,7 +839,7 @@ void MainDialog::updateEncryptionControls()
         // If plugin doesn't support encryption, uncheck and disable
         if (!supportsPassword) {
             ui->encryptCheckbox->setChecked(false);
-            ui->encryptCheckbox->setToolTip("This format does not support encryption");
+            ui->encryptCheckbox->setToolTip(tr("This format does not support encryption"));
         } else {
             ui->encryptCheckbox->setToolTip("");
         }
@@ -654,7 +879,7 @@ void MainDialog::onPasswordGenerateClicked()
 void MainDialog::onPasswordCopyClicked()
 {
     QGuiApplication::clipboard()->setText(ui->passwordEdit->text());
-    showSuccess("Password copied to clipboard!");
+    showSuccess(tr("Password copied to clipboard!"));
 }
 
 void MainDialog::onPasswordShowToggle(bool checked)
@@ -673,35 +898,73 @@ bool MainDialog::createArchive(const QString& outputPath, bool encrypt, const QS
     // Get the selected archive plugin
     ArchivePluginInterface* plugin = ui->formatCombo->currentData().value<ArchivePluginInterface*>();
     if (!plugin) {
-        showError("No archive plugin selected!");
+        showError(tr("No archive plugin is available."));
         return false;
     }
-    
+
     qDebug() << "Using plugin:" << plugin->name() << "to create archive:" << outputPath;
-    
-    // Create archive using the plugin
-    return plugin->createArchive(m_inputPaths, outputPath, encrypt ? password : QString(), nullptr);
+
+    // Plugins report their progress, so the window keeps repainting (and Windows
+    // does not mark Absand as "not responding") while large archives are built.
+    QProgressDialog progress(tr("Creating the archive..."), QString(), 0, 100, this);
+    progress.setWindowTitle(tr("Creating Archive"));
+    progress.setWindowModality(Qt::ApplicationModal);
+    progress.setCancelButton(nullptr);
+    progress.setMinimumDuration(0);
+    progress.setAutoClose(false);
+    progress.setAutoReset(false);
+    progress.setWindowFlag(Qt::WindowCloseButtonHint, false);
+    progress.setValue(0);
+
+    const bool created = plugin->createArchive(
+        m_inputPaths, outputPath, encrypt ? password : QString(),
+        [&progress](int value) {
+            progress.setValue(qBound(0, value, 100));
+            QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+        });
+
+    progress.close();
+    return created;
 }
 
-void MainDialog::transferArchiveIfNeeded(const QString& archivePath)
+bool MainDialog::transferArchiveIfNeeded(const QString& archivePath, QString* errorMessage,
+                                          QString* shareLink)
 {
     auto* plugin = currentDestinationPlugin();
     if (!plugin) {
-        return;
+        return true;
     }
 
+    storeDestinationRecipient();
     const QVariantMap config = currentDestinationConfig();
     QString error;
     if (!plugin->validateConfiguration(config, &error)) {
-        QMessageBox::warning(this, tr("Destination Not Ready"),
-                             tr("%1: %2").arg(plugin->name(), error));
-        return;
+        if (errorMessage) {
+            *errorMessage = tr("%1 is not configured: %2").arg(plugin->name(), error);
+        }
+        return false;
     }
 
-    if (!plugin->transferArchive(archivePath, config, nullptr)) {
-        QMessageBox::warning(this, tr("Transfer Failed"),
-                             tr("The archive was created, but the transfer step failed."));
+    bool success = false;
+    QString message;
+    QString link;
+    plugin->transferArchive(archivePath, config,
+                            [&success, &message, &link](bool ok, QString text, QString sharedLink) {
+                                success = ok;
+                                message = text;
+                                link = sharedLink;
+                            });
+
+    if (shareLink) {
+        *shareLink = link;
     }
+
+    if (!success && errorMessage) {
+        *errorMessage = message.isEmpty()
+            ? tr("%1: the transfer step failed.").arg(plugin->name())
+            : tr("%1: %2").arg(plugin->name(), message);
+    }
+    return success;
 }
 
 SendPluginInterface* MainDialog::currentSendPlugin() const
@@ -713,148 +976,345 @@ SendPluginInterface* MainDialog::currentSendPlugin() const
 QVariantMap MainDialog::currentSendConfig() const
 {
     auto* plugin = currentSendPlugin();
-    if (!plugin) return {};
+    if (!plugin) {
+        return {};
+    }
+
     QVariantMap config = plugin->defaultConfiguration();
     const QVariantMap stored = UserConfig::loadSendConfig(plugin->configKey());
-    for (auto it = stored.cbegin(); it != stored.cend(); ++it) config[it.key()] = it.value();
+    for (auto it = stored.cbegin(); it != stored.cend(); ++it) {
+        config[it.key()] = it.value();
+    }
+
+    // The recipient is edited in the main window and wins over the stored value.
+    const ConfigSchema schema = plugin->configSchema();
+    const ConfigField* recipient = schemaRecipientField(schema);
+    if (recipient && m_sendRecipientEdit) {
+        const QString text = m_sendRecipientEdit->text().trimmed();
+        if (!text.isEmpty()) {
+            config.insert(recipient->key, text);
+        }
+    }
+
+    // Fills the {link} placeholder of the message template.
+    config.insert(QStringLiteral("shareLink"), m_pendingShareLink);
+
     return config;
 }
 
-bool MainDialog::sendPasswordIfNeeded(const QString& password)
+void MainDialog::onSendChannelChanged(int index)
+{
+    Q_UNUSED(index);
+    storeSendRecipient();
+    updateSendChannelControls();
+}
+
+void MainDialog::onSendProfileChanged(int index)
+{
+    auto* plugin = currentSendPlugin();
+    if (!plugin || !m_sendProfileCombo || index < 0) {
+        return;
+    }
+
+    const QString chosen = m_sendProfileCombo->itemText(index);
+    if (chosen.isEmpty()) {
+        return;
+    }
+
+    storeSendRecipient();
+    UserConfig::setActiveProfile(UserConfig::ConfigKind::Send, plugin->configKey(), chosen);
+    updateSendChannelControls();
+}
+
+void MainDialog::storeSendRecipient()
+{
+    auto* plugin = currentSendPlugin();
+    if (!plugin || !m_sendRecipientEdit) {
+        return;
+    }
+
+    const ConfigSchema schema = plugin->configSchema();
+    const ConfigField* recipient = schemaRecipientField(schema);
+    if (!recipient) {
+        return;
+    }
+
+    storeRecipient(UserConfig::ConfigKind::Send, plugin->configKey(), recipient->key,
+                   m_sendRecipientEdit->text().trimmed());
+}
+
+void MainDialog::updateSendChannelControls()
+{
+    auto* plugin = currentSendPlugin();
+    const bool hasPlugin = plugin != nullptr;
+
+    if (m_sendProfileLabel) {
+        m_sendProfileLabel->setVisible(hasPlugin);
+    }
+    if (m_sendProfileCombo) {
+        const QSignalBlocker blocker(m_sendProfileCombo);
+        m_sendProfileCombo->setVisible(hasPlugin);
+        m_sendProfileCombo->clear();
+        if (plugin) {
+            m_sendProfileCombo->addItems(
+                UserConfig::profileNames(UserConfig::ConfigKind::Send, plugin->configKey()));
+            const QString active = UserConfig::activeProfile(UserConfig::ConfigKind::Send, plugin->configKey());
+            const int index = m_sendProfileCombo->findText(active);
+            m_sendProfileCombo->setCurrentIndex(index >= 0 ? index : 0);
+        }
+    }
+
+    const ConfigSchema schema = plugin ? plugin->configSchema() : ConfigSchema();
+    const ConfigField* recipient = schemaRecipientField(schema);
+
+    if (m_sendRecipientLabel) {
+        m_sendRecipientLabel->setVisible(recipient != nullptr);
+        if (recipient) {
+            m_sendRecipientLabel->setText(recipient->label.isEmpty() ? tr("Recipient:") : recipient->label + QLatin1Char(':'));
+        }
+    }
+    if (m_sendRecipientEdit) {
+        m_sendRecipientEdit->setVisible(recipient != nullptr);
+        if (recipient) {
+            m_sendRecipientEdit->setPlaceholderText(recipient->placeholder);
+            m_sendRecipientEdit->setToolTip(recipient->help.isEmpty() ? recipient->label : recipient->help);
+            m_sendRecipientEdit->setText(
+                storedRecipient(UserConfig::ConfigKind::Send, plugin->configKey(), recipient->key));
+        } else {
+            m_sendRecipientEdit->clear();
+        }
+    }
+}
+
+bool MainDialog::sendPasswordIfNeeded(const QString& password, QString* errorMessage)
 {
     auto* plugin = currentSendPlugin();
     if (!plugin) return true;
+
+    storeSendRecipient();
     const QVariantMap config = currentSendConfig();
     QString validationError;
     if (!plugin->validateConfiguration(config, &validationError)) {
-        QMessageBox::warning(this, tr("Delivery Not Ready"), tr("%1: %2").arg(plugin->name(), validationError));
+        if (errorMessage) {
+            *errorMessage = tr("%1 is not configured: %2").arg(plugin->name(), validationError);
+        }
         return false;
     }
     bool success = false;
     QString message;
     plugin->send(password, config, [&](bool ok, QString text) { success = ok; message = text; });
-    if (!success) QMessageBox::warning(this, tr("Password Delivery Failed"), message);
+    if (!success && errorMessage) {
+        *errorMessage = message.isEmpty()
+            ? tr("%1: the password could not be delivered.").arg(plugin->name())
+            : message;
+    }
     return success;
 }
 
 void MainDialog::onArchiveButtonClicked()
 {
     if (m_inputPaths.isEmpty()) {
-        showError("No files selected");
+        showError(tr("Select at least one file or folder first."));
         return;
     }
-    
-    QString destPath = ui->destinationPathEdit->text();
+
+    const QString destPath = ui->destinationPathEdit->text().trimmed();
     if (destPath.isEmpty()) {
-        showError("Please select a destination");
+        showError(tr("Please choose where the archive should be created."));
         return;
     }
-    
-    bool useEncryption = ui->encryptCheckbox->isChecked();
-    QString password = ui->passwordEdit->text();
-    
-    // Check if the selected plugin supports encryption
+
     ArchivePluginInterface* plugin = ui->formatCombo->currentData().value<ArchivePluginInterface*>();
-    if (useEncryption && plugin && !plugin->supportsPassword()) {
-        QMessageBox::warning(this, "Encryption Not Supported",
-            QString("%1 format does not support encryption.\n\n"
-                    "The archive will be created WITHOUT encryption.\n\n"
-                    "For encrypted archives, please use ZIP format.")
-                    .arg(plugin->name()));
+    if (!plugin) {
+        showError(tr("No archive plugin is available."));
+        return;
+    }
+
+    bool useEncryption = ui->encryptCheckbox->isChecked();
+    const QString password = ui->passwordEdit->text();
+
+    if (useEncryption && !plugin->supportsPassword()) {
+        QMessageBox::warning(this, tr("Encryption Not Supported"),
+            tr("%1 does not support encryption.\n\n"
+               "The archive will be created WITHOUT encryption.\n\n"
+               "Use the ZIP or 7z format for encrypted archives.")
+                .arg(plugin->name()));
         useEncryption = false;
     }
-    
+
     if (useEncryption && password.isEmpty()) {
-        showError("Please set a password for encryption");
+        showError(tr("Please set a password for encryption."));
         return;
     }
-    
-    // Only confirm encryption if the format actually supports it
-    if (useEncryption && plugin && plugin->supportsPassword()) {
+
+    if (useEncryption) {
         QMessageBox confirmBox(this);
-        confirmBox.setWindowTitle("Confirm Encryption");
-        confirmBox.setText(QString("Encrypt archive with %1?\n\nPassword: %2")
-            .arg(ui->encryptionCombo->currentText())
-            .arg(password));
-        confirmBox.setInformativeText("AES-256 provides military-grade security.");
+        confirmBox.setWindowTitle(tr("Confirm Encryption"));
+        confirmBox.setIcon(QMessageBox::Question);
+        confirmBox.setText(tr("Encrypt the archive with %1?\n\nPassword: %2")
+                               .arg(ui->encryptionCombo->currentText(), password));
         confirmBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
         confirmBox.setDefaultButton(QMessageBox::Yes);
-        
+
         if (confirmBox.exec() != QMessageBox::Yes) {
             return;
         }
     }
-    
+
+    // The archive is always written to a real folder first; a destination plugin
+    // (network share, FTP, SFTP) transfers it afterwards.
+    const QFileInfo destinationInfo(destPath);
+    const QString destinationFolder = destinationInfo.absolutePath();
+    if (destinationFolder.isEmpty() || !QDir().mkpath(destinationFolder)) {
+        showError(tr("The folder %1 does not exist and could not be created.").arg(destinationFolder));
+        return;
+    }
+
     qDebug() << "Creating archive...";
     qDebug() << "  Destination:" << destPath;
-    qDebug() << "  Encryption:" << (useEncryption ? ui->encryptionCombo->currentText() : "None");
-    
-    ui->archiveButton->setEnabled(false);
-    ui->archiveButton->setText("Creating archive...");
-    qApp->processEvents();
-    
-    bool success = createArchive(destPath, useEncryption, password);
-    
-    ui->archiveButton->setEnabled(true);
-    ui->archiveButton->setText("Create Archive");
-    
-    if (success) {
-        qDebug() << "Archive created successfully:" << destPath;
-        m_lastArchivePath = destPath;
+    qDebug() << "  Encryption:" << (useEncryption ? ui->encryptionCombo->currentText() : QStringLiteral("None"));
 
-        transferArchiveIfNeeded(destPath);
-        if (useEncryption && !password.isEmpty()) {
-            sendPasswordIfNeeded(password);
-        }
-        
-        QMessageBox msgBox(this);
-        msgBox.setWindowTitle("Success");
-        
-        QString sizeStr;
-        qint64 size = QFileInfo(destPath).size();
-        if (size < 1024) {
-            sizeStr = QString("%1 B").arg(size);
-        } else if (size < 1024 * 1024) {
-            sizeStr = QString("%1 KB").arg(size / 1024.0, 0, 'f', 2);
-        } else {
-            sizeStr = QString("%1 MB").arg(size / (1024.0 * 1024.0), 0, 'f', 2);
-        }
-        
-        msgBox.setText(QString("Archive created successfully!\n\n%1\n\nSize: %2")
-            .arg(QFileInfo(destPath).fileName())
-            .arg(sizeStr));
-        
-        QPushButton* copyPasswordBtn = nullptr;
-        QPushButton* openFolderBtn = msgBox.addButton("Open Folder", QMessageBox::ActionRole);
-        QPushButton* closeBtn = msgBox.addButton("Close", QMessageBox::AcceptRole);
-        
-        if (useEncryption && !password.isEmpty()) {
-            copyPasswordBtn = msgBox.addButton("Copy Password", QMessageBox::ActionRole);
-        }
-        
-        msgBox.exec();
-        
-        if (copyPasswordBtn && msgBox.clickedButton() == copyPasswordBtn) {
-            QGuiApplication::clipboard()->setText(password);
-            QMessageBox::information(this, "Copied", "Password copied to clipboard!");
-        } else if (msgBox.clickedButton() == openFolderBtn) {
-            QProcess::startDetached("dolphin", QStringList() << QFileInfo(destPath).absolutePath());
-        }
-        
-        accept();
-    } else {
-        showError("Archive creation failed!");
+    const QString idleButtonText = ui->archiveButton->text();
+    ui->archiveButton->setEnabled(false);
+    ui->archiveButton->setText(tr("Creating archive..."));
+
+    // Creating, transferring, and delivering all run inside this call; the event
+    // loop is pumped meanwhile, so a stray close request must be ignored until
+    // the work is finished.
+    m_busy = true;
+
+    const bool success = createArchive(destPath, useEncryption, password);
+
+    if (!success) {
+        m_busy = false;
+        ui->archiveButton->setEnabled(true);
+        ui->archiveButton->setText(idleButtonText);
+        showError(tr("The archive could not be created.\n\n"
+                     "Check that the destination folder is writable and that the "
+                     "input files are still available."));
+        return;
     }
+
+    qDebug() << "Archive created successfully:" << destPath;
+    m_lastArchivePath = destPath;
+
+    QString transferError;
+    QString shareLink;
+    const bool transferSucceeded = transferArchiveIfNeeded(destPath, &transferError, &shareLink);
+    m_pendingShareLink = shareLink;
+
+    const bool passwordCanBeSent = useEncryption && !password.isEmpty();
+    QString deliveryError;
+    // A password for an archive that never reached its destination is useless,
+    // and for a web share the link is part of the message, so delivery only
+    // happens after a successful transfer.
+    const bool deliverySucceeded = passwordCanBeSent && transferSucceeded
+        ? sendPasswordIfNeeded(password, &deliveryError)
+        : false;
+
+    QString sizeText;
+    const qint64 size = QFileInfo(destPath).size();
+    if (size < 1024) {
+        sizeText = tr("%1 B").arg(size);
+    } else if (size < 1024 * 1024) {
+        sizeText = tr("%1 KB").arg(size / 1024.0, 0, 'f', 2);
+    } else {
+        sizeText = tr("%1 MB").arg(size / (1024.0 * 1024.0), 0, 'f', 2);
+    }
+
+    QStringList details;
+    details << QFileInfo(destPath).fileName();
+    details << tr("Size: %1").arg(sizeText);
+
+    QStringList problems;
+    if (DestinationPluginInterface* destination = currentDestinationPlugin()) {
+        if (transferSucceeded) {
+            details << tr("Transferred with the %1 destination.").arg(destination->name());
+        } else {
+            problems << tr("Transfer failed — %1").arg(transferError);
+        }
+    }
+    if (!shareLink.isEmpty()) {
+        details << tr("Download link: %1").arg(shareLink);
+    }
+    if (passwordCanBeSent) {
+        if (deliverySucceeded) {
+            if (SendPluginInterface* channel = currentSendPlugin()) {
+                details << tr("Password delivered via %1.").arg(channel->name());
+            }
+        } else if (!transferSucceeded) {
+            problems << tr("The password was not sent because the transfer failed.");
+        } else {
+            problems << tr("Password delivery failed — %1").arg(deliveryError);
+        }
+    }
+
+    // The archive exists and every follow-up step is finished.
+    m_busy = false;
+    ui->archiveButton->setEnabled(true);
+    ui->archiveButton->setText(idleButtonText);
+
+    QMessageBox msgBox(this);
+    msgBox.setWindowTitle(problems.isEmpty() ? tr("Archive Created") : tr("Archive Created With Problems"));
+    msgBox.setIcon(problems.isEmpty() ? QMessageBox::Information : QMessageBox::Warning);
+    msgBox.setText(tr("Archive created successfully!\n\n%1").arg(details.join(QLatin1Char('\n'))));
+    if (!problems.isEmpty()) {
+        msgBox.setInformativeText(problems.join(QLatin1Char('\n')));
+    }
+
+    QPushButton* openFolderBtn = msgBox.addButton(tr("Show in Folder"), QMessageBox::ActionRole);
+    QPushButton* copyPasswordBtn = nullptr;
+    if (passwordCanBeSent) {
+        copyPasswordBtn = msgBox.addButton(tr("Copy Password"), QMessageBox::ActionRole);
+    }
+    QPushButton* copyLinkBtn = nullptr;
+    if (!shareLink.isEmpty()) {
+        copyLinkBtn = msgBox.addButton(tr("Copy Link"), QMessageBox::ActionRole);
+    }
+    msgBox.addButton(tr("Close"), QMessageBox::AcceptRole);
+
+    msgBox.exec();
+
+    if (copyPasswordBtn && msgBox.clickedButton() == copyPasswordBtn) {
+        QGuiApplication::clipboard()->setText(password);
+        QMessageBox::information(this, tr("Copied"), tr("Password copied to clipboard!"));
+    } else if (copyLinkBtn && msgBox.clickedButton() == copyLinkBtn) {
+        QGuiApplication::clipboard()->setText(m_pendingShareLink);
+        QMessageBox::information(this, tr("Copied"), tr("Download link copied to clipboard."));
+    } else if (msgBox.clickedButton() == openFolderBtn) {
+        if (!revealInFileManager(destPath)) {
+            showError(tr("The archive folder could not be opened."));
+        }
+    }
+
+    accept();
+}
+
+void MainDialog::closeEvent(QCloseEvent* event)
+{
+    if (m_busy) {
+        event->ignore();
+        return;
+    }
+    QDialog::closeEvent(event);
+}
+
+void MainDialog::reject()
+{
+    if (m_busy) {
+        return;
+    }
+    QDialog::reject();
 }
 
 void MainDialog::showError(const QString& message)
 {
     qWarning() << "ERROR:" << message;
-    QMessageBox::critical(this, "Error", message);
+    QMessageBox::critical(this, tr("Error"), message);
 }
 
 void MainDialog::showSuccess(const QString& message)
 {
     qDebug() << "SUCCESS:" << message;
-    QMessageBox::information(this, "Success", message);
+    QMessageBox::information(this, tr("Success"), message);
 }

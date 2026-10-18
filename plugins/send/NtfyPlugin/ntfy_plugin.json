@@ -1,0 +1,9 @@
+{
+  "name": "ntfy push",
+  "version": "1.0.0",
+  "description": "Push the archive password to a free ntfy topic (no account needed)",
+  "author": "Absand Team",
+  "license": "MPL-2.0",
+  "channel": "ntfy",
+  "requiresConfiguration": true
+}

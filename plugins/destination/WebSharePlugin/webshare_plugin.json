@@ -1,0 +1,9 @@
+{
+  "name": "Web share",
+  "version": "1.0.0",
+  "description": "Upload the archive to an anonymous web file host and share the download link",
+  "author": "Absand Team",
+  "license": "MPL-2.0",
+  "channel": "web_share",
+  "requiresConfiguration": true
+}

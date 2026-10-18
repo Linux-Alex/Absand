@@ -1,0 +1,9 @@
+{
+  "name": "SMS",
+  "version": "1.0.0",
+  "description": "Text the archive password through Twilio, Vonage, Textbelt, or any HTTP gateway",
+  "author": "Absand Team",
+  "license": "MPL-2.0",
+  "channel": "sms",
+  "requiresConfiguration": true
+}

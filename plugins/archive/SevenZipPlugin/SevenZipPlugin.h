@@ -25,8 +25,15 @@ public:
         return "7z archive format with AES-256 encryption support"; 
     }
     QVariantMap metadata() const override {
-        return {{"author", "Absand Team"}, 
-                {"formats", supportedExtensions()}};
+        QVariantMap meta;
+        meta["name"] = name();
+        meta["version"] = version();
+        meta["description"] = description();
+        meta["author"] = "Absand Team";
+        meta["formats"] = supportedExtensions();
+        meta["supportsPassword"] = supportsPassword();
+        meta["encryptionMethods"] = availableEncryptionMethods();
+        return meta;
     }
     
     // ArchivePluginInterface

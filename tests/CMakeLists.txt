@@ -9,6 +9,16 @@ add_executable(AbsandTests
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/core/PluginManager.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/core/UserConfig.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/core/UserConfig.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/core/TransferHelpers.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/core/TransferHelpers.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/app/AppBackend.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/app/AppBackend.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/ui/ArchiveBrowserDialog.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/ui/ArchiveBrowserDialog.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/models/FilePathListModel.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/models/ArchiveEntryModel.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/app/ArchiveBrowser.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/app/ArchiveBrowser.h
 )
 
 target_include_directories(AbsandTests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
@@ -18,7 +28,10 @@ target_compile_options(AbsandTests PRIVATE ${LIBZIP_CFLAGS_OTHER})
 
 # PluginManager searches beside the running executable.
 set_target_properties(AbsandTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-add_dependencies(AbsandTests ZipPlugin SevenZipPlugin ClipboardPlugin MatrixPlugin TeamsPlugin TelegramPlugin LocalFolderPlugin NetworkSharePlugin FTPDestinationPlugin SFTPDestinationPlugin)
+add_dependencies(AbsandTests ZipPlugin SevenZipPlugin ClipboardPlugin MatrixPlugin TeamsPlugin TelegramPlugin
+    EmailPlugin SmsPlugin NtfyPlugin DiscordPlugin WebhookPlugin
+    LocalFolderPlugin NetworkSharePlugin FTPDestinationPlugin SFTPDestinationPlugin EmailDestinationPlugin
+    WebSharePlugin)
 
 add_test(NAME Absand.PluginIntegration COMMAND AbsandTests)
 set_tests_properties(Absand.PluginIntegration PROPERTIES

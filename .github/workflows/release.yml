@@ -40,16 +40,31 @@ jobs:
             qt6-base-dev qt6-tools-dev qt6-tools-dev-tools \
             libzip-dev libarchive-dev curl
 
+          # The Kirigami front end needs KF6, which not every Ubuntu release
+          # ships. Use it when available and keep the widget dialog otherwise.
+          frontend=widgets
+          if apt-cache show libkf6kirigami-dev >/dev/null 2>&1 \
+             && apt-cache show qml6-module-org-kde-kirigami >/dev/null 2>&1; then
+            sudo apt-get install -y qt6-declarative-dev libkf6kirigami-dev qml6-module-org-kde-kirigami
+            frontend=kirigami
+          fi
+          echo "ABSAND_FRONTEND=${frontend}" >> "$GITHUB_ENV"
+          echo "Building the ${frontend} front end"
+
       - name: Configure
         run: >-
           cmake -S . -B build-linux -G Ninja
           -DCMAKE_BUILD_TYPE=Release
           -DCMAKE_INSTALL_PREFIX=/usr
+          -DABSAND_FRONTEND=${{ env.ABSAND_FRONTEND }}
 
       - name: Build and test
         run: |
           cmake --build build-linux --parallel 4
           ctest --test-dir build-linux --output-on-failure
+          if [[ "${{ env.ABSAND_FRONTEND }}" == "kirigami" ]]; then
+            QT_QPA_PLATFORM=offscreen ./build-linux/Absand --qml-selftest
+          fi
 
       - name: Build DEB package
         run: |
@@ -97,6 +112,18 @@ jobs:
             mingw-w64-ucrt-x86_64-curl
             mingw-w64-ucrt-x86_64-ca-certificates
 
+      - name: Choose and install the front end
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          frontend=widgets
+          if pacman -Si mingw-w64-ucrt-x86_64-kirigami >/dev/null 2>&1; then
+            pacman -S --needed --noconfirm \
+              mingw-w64-ucrt-x86_64-qt6-declarative mingw-w64-ucrt-x86_64-kirigami
+            frontend=kirigami
+          fi
+          echo "ABSAND_FRONTEND=${frontend}" >> "$GITHUB_ENV"
+          echo "Building the ${frontend} front end"
       - name: Read and verify version
         id: version
         shell: msys2 {0}
@@ -116,9 +143,13 @@ jobs:
           set -euo pipefail
           cmake -S . -B build-windows -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_INSTALL_PREFIX="$PWD/stage/Absand"
+            -DCMAKE_INSTALL_PREFIX="$PWD/stage/Absand" \
+            -DABSAND_FRONTEND="${ABSAND_FRONTEND}"
           cmake --build build-windows --parallel 4
           ctest --test-dir build-windows --output-on-failure
+          if [[ "${ABSAND_FRONTEND}" == "kirigami" ]]; then
+            QT_QPA_PLATFORM=offscreen ./build-windows/Absand.exe --qml-selftest
+          fi
           cmake --install build-windows
           bash packaging/windows/bundle-runtime.sh "$PWD/stage/Absand/bin"
 

@@ -2,12 +2,12 @@
 
 #include "DestinationSettingsDialog.h"
 
+#include "ProfilePage.h"
 #include "core/PluginManager.h"
 #include "core/UserConfig.h"
 #include "interfaces/DestinationPluginInterface.h"
 
 #include <QDialogButtonBox>
-#include <QFormLayout>
 #include <QLabel>
 #include <QMessageBox>
 #include <QTabWidget>
@@ -18,83 +18,67 @@ DestinationSettingsDialog::DestinationSettingsDialog(PluginManager* manager, QWi
     , m_manager(manager)
 {
     setWindowTitle(tr("Destination Settings"));
-    resize(640, 420);
+    resize(720, 520);
 
     auto* layout = new QVBoxLayout(this);
-    auto* intro = new QLabel(tr("Configure how each destination plugin behaves and where it stores archives by default."), this);
+    auto* intro = new QLabel(tr("Configure how each destination plugin behaves and where it stores archives. "
+                                "Every destination can keep several profiles, for example one per server or "
+                                "per recipient."), this);
     intro->setWordWrap(true);
     layout->addWidget(intro);
 
     m_tabs = new QTabWidget(this);
     layout->addWidget(m_tabs, 1);
 
-    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
-    connect(buttons, &QDialogButtonBox::accepted, this, &DestinationSettingsDialog::accept);
-    connect(buttons, &QDialogButtonBox::rejected, this, &DestinationSettingsDialog::reject);
-    layout->addWidget(buttons);
+    if (m_manager) {
+        for (DestinationPluginInterface* plugin : m_manager->destinationPlugins()) {
+            if (!plugin || !plugin->requiresConfiguration()) {
+                continue;
+            }
 
-    buildPages();
-}
+            ProfilePage::Access access;
+            access.kind = UserConfig::ConfigKind::Destination;
+            access.name = [plugin] { return plugin->name(); };
+            access.configKey = [plugin] { return plugin->configKey(); };
+            access.defaults = [plugin] { return plugin->defaultConfiguration(); };
+            access.createWidget = [plugin](QWidget* parent) { return plugin->createConfigWidget(parent); };
+            access.load = [plugin](QWidget* widget, const QVariantMap& config) {
+                plugin->loadConfigurationWidget(widget, config);
+            };
+            access.save = [plugin](QWidget* widget) { return plugin->saveConfigurationWidget(widget); };
+            access.validate = [plugin](const QVariantMap& config, QString* error) {
+                return plugin->validateConfiguration(config, error);
+            };
+            access.schema = plugin->configSchema();
 
-void DestinationSettingsDialog::buildPages()
-{
-    if (!m_manager) {
-        return;
-    }
-
-    const auto plugins = m_manager->destinationPlugins();
-    for (DestinationPluginInterface* plugin : plugins) {
-        if (!plugin) {
-            continue;
+            auto* page = new ProfilePage(access, m_tabs);
+            m_pages.append(page);
+            m_tabs->addTab(page, plugin->name());
         }
-
-        QWidget* page = plugin->createConfigWidget(m_tabs);
-        const QVariantMap config = configForPlugin(plugin);
-        plugin->loadConfigurationWidget(page, config);
-        m_tabs->addTab(page, plugin->name());
-        m_pages.insert(plugin->configKey(), Page{ plugin, page });
     }
 
     if (m_tabs->count() == 0) {
         m_tabs->addTab(new QLabel(tr("No destination plugins were loaded."), m_tabs), tr("Empty"));
     }
-}
 
-QVariantMap DestinationSettingsDialog::configForPlugin(DestinationPluginInterface* plugin) const
-{
-    if (!plugin) {
-        return {};
-    }
-
-    QVariantMap config = plugin->defaultConfiguration();
-    const QVariantMap stored = UserConfig::loadDestinationConfig(plugin->configKey());
-    for (auto it = stored.constBegin(); it != stored.constEnd(); ++it) {
-        config[it.key()] = it.value();
-    }
-    return config;
+    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
+    connect(buttons, &QDialogButtonBox::accepted, this, &DestinationSettingsDialog::accept);
+    connect(buttons, &QDialogButtonBox::rejected, this, &DestinationSettingsDialog::reject);
+    layout->addWidget(buttons);
 }
 
 void DestinationSettingsDialog::accept()
 {
-    if (!m_manager) {
-        QDialog::accept();
-        return;
-    }
-
-    for (auto it = m_pages.constBegin(); it != m_pages.constEnd(); ++it) {
-        const Page& page = it.value();
-        if (!page.plugin || !page.widget) {
-            continue;
-        }
-
-        const QVariantMap config = page.plugin->saveConfigurationWidget(page.widget);
+    for (ProfilePage* page : m_pages) {
         QString error;
-        if (!page.plugin->validateConfiguration(config, &error)) {
-            QMessageBox::warning(this, tr("Invalid Configuration"),
-                                 tr("%1: %2").arg(page.plugin->name(), error));
+        if (!page->commit(&error)) {
+            QMessageBox::warning(this, tr("Invalid Configuration"), error);
             return;
         }
-        UserConfig::saveDestinationConfig(page.plugin->configKey(), config);
+    }
+
+    for (ProfilePage* page : m_pages) {
+        page->persist();
     }
 
     QDialog::accept();

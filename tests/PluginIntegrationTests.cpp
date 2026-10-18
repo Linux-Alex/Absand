@@ -6,6 +6,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QGuiApplication>
+#include <QStandardPaths>
 #include <QTemporaryDir>
 #include <zip.h>
 #include <archive.h>
@@ -14,8 +15,14 @@
 #include <bit7z/bit7z.hpp>
 #include <bit7z/bitabstractarchivecreator.hpp>
 
+#include "app/AppBackend.h"
+#include "app/ArchiveBrowser.h"
 #include "core/PluginManager.h"
 #include "core/SevenZipRuntime.h"
+#include "core/TransferHelpers.h"
+#include "core/WebShareUpload.h"
+#include "core/SendHttpHelper.h"
+#include "core/SmtpMessage.h"
 #include "core/UserConfig.h"
 #include "interfaces/ArchivePluginInterface.h"
 #include "interfaces/DestinationPluginInterface.h"
@@ -63,23 +70,31 @@ private slots:
     {
         QVERIFY2(manager.loadAllPlugins(), "No plugins loaded from the build output");
         QCOMPARE(manager.archivePlugins().size(), 2);
-        QCOMPARE(manager.sendPlugins().size(), 4);
-        QVERIFY(manager.destinationPlugins().size() >= 4);
+        QCOMPARE(manager.sendPlugins().size(), 9);
+        QCOMPARE(manager.destinationPlugins().size(), 6);
         QVERIFY(manager.archivePluginByName("zip archive"));
         QVERIFY(manager.sendPluginByName("CLIPBOARD"));
         QCOMPARE(manager.availableArchiveFormats(), QStringList({"7z", "zip"}));
-        QCOMPARE(manager.availableSendChannels(), QStringList({"clipboard", "matrix", "teams", "telegram"}));
+        QCOMPARE(manager.availableSendChannels(),
+                 QStringList({"clipboard", "discord", "email", "matrix", "ntfy", "sms", "teams", "telegram", "webhook"}));
         QVERIFY(manager.sendPluginByName("Matrix"));
         QVERIFY(manager.sendPluginByName("Microsoft Teams"));
         QVERIFY(manager.sendPluginByName("Telegram"));
+        QVERIFY(manager.sendPluginByName("E-mail (SMTP)"));
+        QVERIFY(manager.sendPluginByName("SMS"));
+        QVERIFY(manager.sendPluginByName("ntfy push"));
+        QVERIFY(manager.sendPluginByName("Discord"));
+        QVERIFY(manager.sendPluginByName("Webhook"));
         QVERIFY(manager.destinationPluginByName("LOCAL FOLDER"));
+        QVERIFY(manager.destinationPluginByName("E-mail (SMTP)"));
+        QVERIFY(manager.destinationPluginByName("WEB SHARE"));
     }
 
     void loadingTwiceDoesNotDuplicatePlugins()
     {
         QVERIFY(!manager.loadAllPlugins());
         QCOMPARE(manager.archivePlugins().size(), 2);
-        QCOMPARE(manager.sendPlugins().size(), 4);
+        QCOMPARE(manager.sendPlugins().size(), 9);
     }
 
     void sevenZipRuntimeIsDiscoverable()
@@ -192,6 +207,672 @@ private slots:
         QFile extractedFile(extractDir.filePath("secret.txt"));
         QVERIFY(extractedFile.open(QIODevice::ReadOnly));
         QCOMPARE(extractedFile.readAll(), QByteArray("secret"));
+    }
+
+    void zipHandlesNonAsciiPathsAndEntryNames()
+    {
+        QTemporaryDir temp;
+        QVERIFY(temp.isValid());
+        QDir root(temp.path());
+        QVERIFY(root.mkpath(QString::fromUtf8("gradivo/\xC5\xA1ola")));
+
+        const QString input = writeFile(temp.filePath(QString::fromUtf8("gradivo/\xC5\xA1ola/\xC4\x8Drke.txt")),
+                                        "unicode payload");
+        QVERIFY(!input.isEmpty());
+
+        // Non-ASCII characters in the archive path itself broke ZIP creation on
+        // Windows, because libzip receives a narrow path from the C runtime.
+        const QString output = temp.filePath(QString::fromUtf8("arhiv \xC4\x8D.png \xC5\xBEiga.zip"));
+        auto* plugin = manager.archivePluginByName("ZIP Archive");
+        QVERIFY(plugin->createArchive({temp.filePath(QString::fromUtf8("gradivo"))}, output, {}));
+        QVERIFY(QFileInfo::exists(output));
+
+        QCOMPARE(readZipEntry(output, QString::fromUtf8("gradivo/\xC5\xA1ola/\xC4\x8Drke.txt")),
+                 QByteArray("unicode payload"));
+    }
+
+    void zipStoresEmptyDirectories()
+    {
+        QTemporaryDir temp;
+        QVERIFY(temp.isValid());
+        QDir root(temp.path());
+        QVERIFY(root.mkpath("folder/empty"));
+        QVERIFY(!writeFile(temp.filePath("folder/keep.txt"), "kept").isEmpty());
+
+        const QString output = temp.filePath("empties.zip");
+        auto* plugin = manager.archivePluginByName("ZIP Archive");
+        QVERIFY(plugin->createArchive({temp.filePath("folder")}, output, {}));
+
+        int error = 0;
+        zip_t* archive = zip_open(QFile::encodeName(output).constData(), ZIP_RDONLY, &error);
+        QVERIFY(archive);
+        QVERIFY(zip_name_locate(archive, "folder/empty/", ZIP_FL_NOCASE) >= 0);
+        QVERIFY(zip_name_locate(archive, "folder/keep.txt", ZIP_FL_NOCASE) >= 0);
+        zip_close(archive);
+    }
+
+    void sevenZipOverwritesExistingArchive()
+    {
+        QTemporaryDir temp;
+        QVERIFY(temp.isValid());
+        const QString input = writeFile(temp.filePath("overwrite.txt"), "second version");
+        const QString output = temp.filePath("existing.7z");
+        QVERIFY(!writeFile(output, "not an archive").isEmpty());
+
+        auto* plugin = manager.archivePluginByName("7z Archive");
+        // 7-Zip refuses to replace an existing file unless the overwrite mode is set.
+        QVERIFY(plugin->createArchive({input}, output, {}));
+
+        archive* reader = archive_read_new();
+        archive_read_support_format_7zip(reader);
+        QCOMPARE(archive_read_open_filename(reader, QFile::encodeName(output).constData(), 10240), ARCHIVE_OK);
+        archive_entry* entry = nullptr;
+        QCOMPARE(archive_read_next_header(reader, &entry), ARCHIVE_OK);
+        archive_read_free(reader);
+    }
+
+    void targetUrlsArePercentEncoded()
+    {
+        QCOMPARE(TransferHelpers::buildTargetUrl("ftp", "example.com", 21, "/uploads", "arhiv 2024.zip"),
+                 QString("ftp://example.com:21/uploads/arhiv%202024.zip"));
+        QCOMPARE(TransferHelpers::buildTargetUrl("sftp", "example.com", 22, "/odd folder",
+                                                 QString::fromUtf8("\xC5\xBEiga.7z")),
+                 QString("sftp://example.com:22/odd%20folder/%C5%BEiga.7z"));
+        // A target copied from a browser must not produce "ftp://ftp://...".
+        QCOMPARE(TransferHelpers::buildTargetUrl("ftp", "ftp://example.com:2021/", 21, "", "a.zip"),
+                 QString("ftp://example.com:2021/a.zip"));
+        // An invalid port falls back to the scheme default instead of ":0".
+        QCOMPARE(TransferHelpers::buildTargetUrl("ftp", "example.com", 0, "/", "a.zip"),
+                 QString("ftp://example.com:21/a.zip"));
+        QCOMPARE(TransferHelpers::buildTargetUrl("sftp", "example.com", 70000, "/", "a.zip"),
+                 QString("sftp://example.com:22/a.zip"));
+    }
+
+    void copyFileToFolderReplacesDestinationAndKeepsSource()
+    {
+        QTemporaryDir temp;
+        QVERIFY(temp.isValid());
+        const QString source = writeFile(temp.filePath("archive.zip"), "fresh");
+        QVERIFY(!source.isEmpty());
+
+        const QString target = temp.filePath("delivered/2024");
+        QVERIFY(TransferHelpers::copyFileToFolder(source, target, nullptr));
+        QFile delivered(QDir(target).filePath("archive.zip"));
+        QVERIFY(delivered.open(QIODevice::ReadOnly));
+        QCOMPARE(delivered.readAll(), QByteArray("fresh"));
+        delivered.close();
+
+        QVERIFY(writeFile(source, "newer") == source);
+        QVERIFY(TransferHelpers::copyFileToFolder(source, target, nullptr));
+        QVERIFY(delivered.open(QIODevice::ReadOnly));
+        QCOMPARE(delivered.readAll(), QByteArray("newer"));
+        delivered.close();
+
+        // Copying onto itself must succeed without deleting the source.
+        QVERIFY(TransferHelpers::copyFileToFolder(source, temp.path(), nullptr));
+        QVERIFY(QFileInfo::exists(source));
+        QVERIFY(QDir(target).entryList(QDir::Files).contains("archive.zip"));
+    }
+
+    void localFolderDestinationDeliversArchive()
+    {
+        auto* destination = manager.destinationPluginByName("Local Folder");
+        QVERIFY(destination);
+
+        QTemporaryDir temp;
+        QVERIFY(temp.isValid());
+        const QString archive = writeFile(temp.filePath("deliver.zip"), "payload");
+        QVERIFY(!archive.isEmpty());
+
+        const QString target = temp.filePath("delivered/today");
+        const QVariantMap config{ { QStringLiteral("targetFolder"), target } };
+        QVERIFY(destination->validateConfiguration(config, nullptr));
+
+        bool succeeded = false;
+        QString message;
+        QString shareLink;
+        QVERIFY(destination->transferArchive(archive, config,
+                                             [&succeeded, &message, &shareLink](bool ok, QString text, QString link) {
+                                                 succeeded = ok;
+                                                 message = text;
+                                                 shareLink = link;
+                                             }));
+        QVERIFY(shareLink.isEmpty());
+        QVERIFY(succeeded);
+        QVERIFY(!message.isEmpty());
+        QVERIFY(QFileInfo::exists(QDir(target).filePath("deliver.zip")));
+    }
+
+    void curlUploadReportsFailureForUnreachableServer()
+    {
+        if (QStandardPaths::findExecutable(QStringLiteral("curl")).isEmpty()) {
+            QSKIP("curl is not installed");
+        }
+
+        QTemporaryDir temp;
+        QVERIFY(temp.isValid());
+        const QString payload = writeFile(temp.filePath("payload.zip"), "x");
+        QVERIFY(!payload.isEmpty());
+
+        QString error;
+        const bool uploaded = TransferHelpers::uploadWithCurl(
+            { QStringLiteral("-T"), payload, QStringLiteral("ftp://127.0.0.1:1/payload.zip") },
+            &error, 15000);
+        QVERIFY(!uploaded);
+        QVERIFY(!error.isEmpty());
+    }
+
+    void copyFileToFolderReportsMissingSource()
+    {
+        QTemporaryDir temp;
+        QVERIFY(temp.isValid());
+        QString error;
+        QVERIFY(!TransferHelpers::copyFileToFolder(temp.filePath("missing.zip"), temp.path(), &error));
+        QVERIFY(!error.isEmpty());
+    }
+
+    void pluginSchemasDescribeTheirDefaults()
+    {
+        // Every declared field must have a default, and every configuration key a
+        // plugin returns must be described by its schema: the settings UI (and the
+        // QML frontend) render exactly the schema.
+        for (SendPluginInterface* plugin : manager.sendPlugins()) {
+            const ConfigSchema schema = plugin->configSchema();
+            if (schema.isEmpty()) {
+                continue;
+            }
+
+            const QVariantMap defaults = plugin->defaultConfiguration();
+            for (const ConfigField& field : schema) {
+                QVERIFY2(!field.key.isEmpty(), qPrintable(plugin->name()));
+                QVERIFY2(!field.label.isEmpty(), qPrintable(field.key));
+                QVERIFY2(defaults.contains(field.key),
+                         qPrintable(QStringLiteral("%1: missing default for %2").arg(plugin->name(), field.key)));
+
+                const QVariant defaultValue = defaults.value(field.key);
+                switch (field.type) {
+                case ConfigField::Type::Integer:
+                    QVERIFY2(defaultValue.canConvert<int>(), qPrintable(field.key));
+                    break;
+                case ConfigField::Type::Bool:
+                    QVERIFY2(defaultValue.canConvert<bool>(), qPrintable(field.key));
+                    break;
+                case ConfigField::Type::Choice:
+                    QVERIFY2(field.choices.contains(defaultValue.toString()),
+                             qPrintable(QStringLiteral("%1: default %2 is not one of the choices")
+                                            .arg(field.key, defaultValue.toString())));
+                    break;
+                default:
+                    break;
+                }
+            }
+
+            for (auto it = defaults.constBegin(); it != defaults.constEnd(); ++it) {
+                bool described = false;
+                for (const ConfigField& field : schema) {
+                    if (field.key == it.key()) {
+                        described = true;
+                        break;
+                    }
+                }
+                QVERIFY2(described,
+                         qPrintable(QStringLiteral("%1: key %2 is not in the schema").arg(plugin->name(), it.key())));
+            }
+        }
+
+        for (DestinationPluginInterface* plugin : manager.destinationPlugins()) {
+            const ConfigSchema schema = plugin->configSchema();
+            const QVariantMap defaults = plugin->defaultConfiguration();
+            for (const ConfigField& field : schema) {
+                QVERIFY2(defaults.contains(field.key),
+                         qPrintable(QStringLiteral("%1: missing default for %2").arg(plugin->name(), field.key)));
+            }
+        }
+    }
+
+    void profilesAreIndependentPerPlugin()
+    {
+        QTemporaryDir temp;
+        QVERIFY(temp.isValid());
+        UserConfig::setConfigRootOverrideForTests(temp.path());
+
+        const auto kind = UserConfig::ConfigKind::Send;
+        const QString key = QStringLiteral("email");
+
+        UserConfig::saveProfile(kind, key, QStringLiteral("marinic.eu"),
+                                { { "host", "smtp.marinic.eu" }, { "recipient", "aleks@marinic.eu" } });
+        UserConfig::saveProfile(kind, key, QStringLiteral("arcont.si"),
+                                { { "host", "smtp.arcont.si" }, { "recipient", "dcs@marinic.eu" } });
+
+        QCOMPARE(UserConfig::profileNames(kind, key),
+                 QStringList({ QStringLiteral("arcont.si"), QStringLiteral("marinic.eu") }));
+
+        // The last saved profile becomes the active one.
+        QCOMPARE(UserConfig::activeProfile(kind, key), QStringLiteral("arcont.si"));
+        QCOMPARE(UserConfig::loadProfile(kind, key).value("host").toString(), QStringLiteral("smtp.arcont.si"));
+
+        UserConfig::setActiveProfile(kind, key, QStringLiteral("marinic.eu"));
+        QCOMPARE(UserConfig::loadSendConfig(key).value("recipient").toString(), QStringLiteral("aleks@marinic.eu"));
+
+        UserConfig::renameProfile(kind, key, QStringLiteral("arcont.si"), QStringLiteral("work"));
+        QVERIFY(UserConfig::profileNames(kind, key).contains(QStringLiteral("work")));
+        QVERIFY(!UserConfig::profileNames(kind, key).contains(QStringLiteral("arcont.si")));
+
+        UserConfig::deleteProfile(kind, key, QStringLiteral("work"));
+        QCOMPARE(UserConfig::profileNames(kind, key), QStringList({ QStringLiteral("marinic.eu") }));
+
+        // The last remaining profile cannot be deleted.
+        UserConfig::deleteProfile(kind, key, QStringLiteral("marinic.eu"));
+        QCOMPARE(UserConfig::profileNames(kind, key), QStringList({ QStringLiteral("marinic.eu") }));
+
+        UserConfig::clearConfigRootOverrideForTests();
+    }
+
+    void legacySingleConfigurationIsMigratedToADefaultProfile()
+    {
+        QTemporaryDir temp;
+        QVERIFY(temp.isValid());
+        UserConfig::setConfigRootOverrideForTests(temp.path());
+
+        const QString legacyPath = QDir(temp.path()).filePath("send/telegram.json");
+        QVERIFY(QDir().mkpath(QFileInfo(legacyPath).absolutePath()));
+        const QString legacy = writeFile(legacyPath, R"({"botToken":"legacy-token","chatId":"42","messageTemplate":"{password}"})");
+        QVERIFY(!legacy.isEmpty());
+
+        const auto kind = UserConfig::ConfigKind::Send;
+        QCOMPARE(UserConfig::profileNames(kind, QStringLiteral("telegram")),
+                 QStringList({ UserConfig::defaultProfileName() }));
+        QCOMPARE(UserConfig::loadSendConfig(QStringLiteral("telegram")).value("chatId").toString(), QStringLiteral("42"));
+
+        // Saving migrates the file to the profile layout.
+        UserConfig::saveProfile(kind, QStringLiteral("telegram"),
+                                UserConfig::defaultProfileName(),
+                                { { "botToken", "new-token" }, { "chatId", "7" }, { "messageTemplate", "{password}" } });
+        QCOMPARE(UserConfig::loadSendConfig(QStringLiteral("telegram")).value("botToken").toString(),
+                 QStringLiteral("new-token"));
+
+        UserConfig::clearConfigRootOverrideForTests();
+    }
+
+    void newDeliveryChannelsValidateTheirSettings()
+    {
+        QString error;
+
+        auto* email = manager.sendPluginByName("E-mail (SMTP)");
+        QVERIFY(email);
+        QVERIFY(!email->validateConfiguration({}, &error));
+        QVERIFY(!error.isEmpty());
+        QVERIFY(email->validateConfiguration({ { "host", "smtp.example.com" }, { "port", 587 },
+                                              { "recipient", "a@example.com; b@example.com" },
+                                              { "messageTemplate", "Password: {password}" } }, &error));
+        QVERIFY(!email->validateConfiguration({ { "host", "smtp.example.com" }, { "port", 587 },
+                                                { "recipient", "not-an-address" },
+                                                { "messageTemplate", "{password}" } }, &error));
+
+        auto* sms = manager.sendPluginByName("SMS");
+        QVERIFY(sms);
+        QVERIFY(!sms->validateConfiguration({}, &error));
+        QVERIFY(sms->validateConfiguration({ { "provider", "Textbelt" }, { "recipient", "+38640123456" },
+                                            { "messageTemplate", "{password}" } }, &error));
+        QVERIFY(!sms->validateConfiguration({ { "provider", "Twilio" }, { "recipient", "+38640123456" },
+                                              { "messageTemplate", "{password}" } }, &error));
+
+        auto* ntfy = manager.sendPluginByName("ntfy push");
+        QVERIFY(ntfy);
+        QVERIFY(ntfy->validateConfiguration({ { "serverUrl", "https://ntfy.sh" }, { "topic", "abc123" },
+                                              { "messageTemplate", "{password}" } }, &error));
+        QVERIFY(!ntfy->validateConfiguration({ { "serverUrl", "https://ntfy.sh" }, { "messageTemplate", "{password}" } },
+                                             &error));
+
+        auto* discord = manager.sendPluginByName("Discord");
+        QVERIFY(discord);
+        QVERIFY(discord->validateConfiguration({ { "webhookUrl", "https://discord.com/api/webhooks/1/x" },
+                                                 { "messageTemplate", "{password}" } }, &error));
+        QVERIFY(!discord->validateConfiguration({ { "webhookUrl", "ftp://nope" },
+                                                  { "messageTemplate", "{password}" } }, &error));
+
+        auto* webhook = manager.sendPluginByName("Webhook");
+        QVERIFY(webhook);
+        QVERIFY(webhook->validateConfiguration({ { "url", "https://example.com/hook" },
+                                                 { "messageTemplate", "{password}" } }, &error));
+        QVERIFY(!webhook->validateConfiguration({ { "messageTemplate", "{password}" } }, &error));
+
+        auto* emailDestination = manager.destinationPluginByName("E-mail (SMTP)");
+        QVERIFY(emailDestination);
+        QVERIFY(emailDestination->validateConfiguration({ { "host", "smtp.example.com" }, { "port", 587 },
+                                                          { "recipient", "a@example.com" } }, &error));
+        QVERIFY(!emailDestination->validateConfiguration({ { "recipient", "a@example.com" } }, &error));
+    }
+
+    void mailHelpersSplitAddressesAndEncodeHeaders()
+    {
+        QCOMPARE(SendHttpHelper::splitAddresses("a@example.com; b@example.com, c@example.com"),
+                 QStringList({ "a@example.com", "b@example.com", "c@example.com" }));
+        QCOMPARE(SendHttpHelper::splitAddresses("  ,, "), QStringList());
+        QCOMPARE(SendHttpHelper::splitAddresses("a@example.com\na@example.com"),
+                 QStringList({ "a@example.com" }));
+
+        // Header injection must be impossible through the subject.
+        const QString sanitized = SendHttpHelper::sanitizedHeaderValue("Hello\r\nBcc: evil@example.com");
+        QVERIFY(!sanitized.contains('\n'));
+        QVERIFY(!sanitized.contains('\r'));
+
+        // Non-ASCII subjects are encoded as an RFC 2047 word.
+        const QString subject = SmtpMessage::encodedSubject(QString::fromUtf8("\xC5\xBDiga geslo"));
+        QVERIFY(subject.startsWith("=?UTF-8?B?"));
+        QVERIFY(subject.endsWith("?="));
+
+        const QByteArray wrapped = SmtpMessage::wrappedBase64(QByteArray(200, 'a'));
+        const QList<QByteArray> lines = wrapped.split('\n');
+        for (const QByteArray& line : lines) {
+            QVERIFY(line.size() <= 77);
+        }
+    }
+
+    void webShareProvidersCoverTheFreeHosts()
+    {
+        const QStringList ids = WebShareUpload::providerIds();
+        for (const char* expected : { "gofile", "litterbox", "tempsh", "x0at", "catbox", "tmpfiles",
+                                      "pixeldrain", "custom" }) {
+            QVERIFY2(ids.contains(QString::fromLatin1(expected)), expected);
+        }
+
+        QCOMPARE(WebShareUpload::providerById("litterbox").limitMb, 1024);
+        QCOMPARE(WebShareUpload::providerById("tempsh").limitMb, 4096);
+        QCOMPARE(WebShareUpload::providerById("x0at").limitMb, 1024);
+        QCOMPARE(WebShareUpload::providerById("catbox").limitMb, 200);
+        QCOMPARE(WebShareUpload::providerById("tmpfiles").limitMb, 100);
+        QCOMPARE(WebShareUpload::providerById("pixeldrain").limitMb, 20480);
+        QVERIFY(WebShareUpload::requiresToken("pixeldrain"));
+        QVERIFY(!WebShareUpload::requiresToken("gofile"));
+    }
+
+    void webShareCurlConfigsTargetTheRightEndpoints()
+    {
+        const QString archive = QStringLiteral("/tmp/arhiv test.zip");
+
+        QString error;
+        QVERIFY(WebShareUpload::curlConfig("pixeldrain", {}, archive, &error).isEmpty());
+        QVERIFY(!error.isEmpty());
+
+        error.clear();
+        QVERIFY(WebShareUpload::curlConfig("custom", {}, archive, &error).isEmpty());
+        QVERIFY(!error.isEmpty());
+
+        const QByteArray gofile = WebShareUpload::curlConfig("gofile", {}, archive, &error);
+        QVERIFY(gofile.contains("https://store1.gofile.io/contents/uploadfile"));
+        QVERIFY(gofile.contains("form = \"file=@\\\"/tmp/arhiv test.zip\\\""));
+
+        const QByteArray litterbox = WebShareUpload::curlConfig(
+            "litterbox", { { "expiry", "24h" } }, archive, &error);
+        QVERIFY(litterbox.contains("litterbox.catbox.moe/resources/internals/api.php"));
+        QVERIFY(litterbox.contains("form = \"time=24h\""));
+        QVERIFY(litterbox.contains("form = \"reqtype=fileupload\""));
+
+        QVERIFY(WebShareUpload::curlConfig("tempsh", {}, archive, &error).contains("https://temp.sh/upload"));
+        QVERIFY(WebShareUpload::curlConfig("x0at", {}, archive, &error).contains("https://x0.at/"));
+        QVERIFY(WebShareUpload::curlConfig("catbox", {}, archive, &error).contains("catbox.moe/user/api.php"));
+        QVERIFY(WebShareUpload::curlConfig("tmpfiles", {}, archive, &error).contains("tmpfiles.org/api/v1/upload"));
+
+        const QByteArray pixeldrain = WebShareUpload::curlConfig(
+            "pixeldrain", { { "accountToken", "secret-key" } }, QStringLiteral("/tmp/a.zip"), &error);
+        QVERIFY(pixeldrain.contains("https://pixeldrain.com/api/file/a.zip"));
+        QVERIFY(pixeldrain.contains("user = \":secret-key\""));
+        QVERIFY(pixeldrain.contains("request = \"PUT\""));
+
+        const QByteArray custom = WebShareUpload::curlConfig(
+            "custom", { { "customUrl", "https://files.example/upload" } }, archive, &error);
+        QVERIFY(custom.contains("https://files.example/upload"));
+    }
+
+    void webShareParsesProviderResponses()
+    {
+        QString error;
+
+        QCOMPARE(WebShareUpload::parseResponse(
+                     QStringLiteral("gofile"),
+                     QByteArray("{\"status\":\"ok\",\"data\":{\"downloadPage\":\"https://gofile.io/d/abc123\"}}"),
+                     &error),
+                 QString("https://gofile.io/d/abc123"));
+
+        QCOMPARE(WebShareUpload::parseResponse(
+                     QStringLiteral("tmpfiles"),
+                     QByteArray("{\"status\":\"success\",\"data\":{\"url\":\"https://tmpfiles.org/1234/arhiv.zip\"}}"),
+                     &error),
+                 QString("https://tmpfiles.org/dl/1234/arhiv.zip"));
+
+        QCOMPARE(WebShareUpload::parseResponse(
+                     QStringLiteral("pixeldrain"),
+                     QByteArray("{\"id\":\"xyz789\",\"name\":\"arhiv.zip\"}"), &error),
+                 QString("https://pixeldrain.com/u/xyz789"));
+
+        for (const char* provider : { "catbox", "litterbox", "tempsh", "x0at" }) {
+            QCOMPARE(WebShareUpload::parseResponse(QString::fromLatin1(provider),
+                                                   QByteArray("https://host.example/arhiv.zip\n"), &error),
+                     QString("https://host.example/arhiv.zip"));
+        }
+
+        // Custom endpoints may answer with plain text or a small JSON document.
+        QCOMPARE(WebShareUpload::parseResponse("custom", "https://example.com/f/1", &error),
+                 QString("https://example.com/f/1"));
+        QCOMPARE(WebShareUpload::parseResponse(QStringLiteral("custom"),
+                                              QByteArray("{\"url\":\"https://example.com/f/2\"}"), &error),
+                 QString("https://example.com/f/2"));
+        QVERIFY(WebShareUpload::parseResponse("custom", "nope", &error).isEmpty());
+        QVERIFY(!error.isEmpty());
+
+        error.clear();
+        QVERIFY(WebShareUpload::parseResponse(QStringLiteral("tmpfiles"),
+                                              QByteArray("{\"status\":\"error\"}"), &error).isEmpty());
+        QVERIFY(!error.isEmpty());
+    }
+
+    void webShareDestinationValidatesItsSettings()
+    {
+        auto* plugin = manager.destinationPluginByName("Web share");
+        QVERIFY(plugin);
+
+        QString error;
+        QVERIFY(plugin->validateConfiguration(plugin->defaultConfiguration(), &error));
+
+        QVariantMap pixeldrain = plugin->defaultConfiguration();
+        pixeldrain.insert("provider", "pixeldrain");
+        QVERIFY(!plugin->validateConfiguration(pixeldrain, &error));
+        QVERIFY(!error.isEmpty());
+        pixeldrain.insert("accountToken", "key");
+        QVERIFY(plugin->validateConfiguration(pixeldrain, &error));
+
+        QVariantMap custom = plugin->defaultConfiguration();
+        custom.insert("provider", "custom");
+        QVERIFY(!plugin->validateConfiguration(custom, &error));
+        custom.insert("customUrl", "https://files.example/upload");
+        QVERIFY(plugin->validateConfiguration(custom, &error));
+
+        QVariantMap unknown = plugin->defaultConfiguration();
+        unknown.insert("provider", "nowhere");
+        QVERIFY(!plugin->validateConfiguration(unknown, &error));
+    }
+
+    void messageTemplateSupportsTheShareLink()
+    {
+        const QVariantMap config{ { "messageTemplate", "Password: {password}\nDownload: {link}" },
+                                  { "shareLink", "https://gofile.io/d/abc" } };
+        QCOMPARE(SendHttpHelper::messageFromTemplate(config, "s3cret"),
+                 QString("Password: s3cret\nDownload: https://gofile.io/d/abc"));
+
+        // Without a share link the placeholder simply disappears.
+        QCOMPARE(SendHttpHelper::messageFromTemplate({ { "messageTemplate", "Password: {password}{link}" } }, "x"),
+                 QString("Password: x"));
+    }
+
+    void backendCreatesArchivesThroughTheQmlFacade()
+    {
+        QTemporaryDir temp;
+        QVERIFY(temp.isValid());
+        UserConfig::setConfigRootOverrideForTests(temp.path());
+
+        const QString input = writeFile(temp.filePath("report.txt"), "quarterly numbers");
+        QVERIFY(!input.isEmpty());
+
+        AppBackend backend;
+        backend.addFiles({ input });
+        QCOMPARE(backend.inputCount(), 1);
+        QVERIFY(backend.inputSummary().contains("quarterly") || backend.inputSummary().contains("report"));
+
+        const QString outputFolder = temp.filePath("output");
+        backend.setDestinationFolder(outputFolder);
+        backend.setEncrypt(false);
+
+        QVERIFY(backend.startArchive());
+        QVERIFY(!backend.busy());
+
+        const QStringList created = QDir(outputFolder).entryList(QDir::Files);
+        QVERIFY(!created.isEmpty());
+        QVERIFY(created.first().endsWith(".zip"));
+
+        QVERIFY(backend.resultVisible());
+        QVERIFY(backend.resultDetails().contains(created.first()));
+        QVERIFY(backend.resultShareLink().isEmpty());
+        backend.dismissResult();
+
+        UserConfig::clearConfigRootOverrideForTests();
+    }
+
+    void backendRemembersPerProfileRecipients()
+    {
+        QTemporaryDir temp;
+        QVERIFY(temp.isValid());
+        UserConfig::setConfigRootOverrideForTests(temp.path());
+
+        AppBackend backend;
+
+        // Pick the e-mail channel and give it two profiles with different recipients.
+        const QVariantList channels = backend.channels();
+        int emailIndex = -1;
+        for (int index = 0; index < channels.size(); ++index) {
+            if (channels.at(index).toMap().value("key").toString() == "email") {
+                emailIndex = index;
+                break;
+            }
+        }
+        QVERIFY(emailIndex > 0);
+
+        backend.setChannelIndex(emailIndex);
+        QVERIFY(backend.channelHasRecipient());
+
+        QCOMPARE(backend.createProfile(true, QStringLiteral("email"), QStringLiteral("work"),
+                                       backend.channelProfile()),
+                 QString());
+        backend.setChannelProfile(QStringLiteral("work"));
+        backend.setChannelRecipient(QStringLiteral("work@example.com"));
+
+        QCOMPARE(backend.createProfile(true, QStringLiteral("email"), QStringLiteral("private"),
+                                       backend.channelProfile()),
+                 QString());
+        backend.setChannelProfile(QStringLiteral("private"));
+        backend.setChannelRecipient(QStringLiteral("private@example.com"));
+
+        backend.setChannelProfile(QStringLiteral("work"));
+        QCOMPARE(backend.channelRecipient(), QString("work@example.com"));
+
+        backend.setChannelProfile(QStringLiteral("private"));
+        QCOMPARE(backend.channelRecipient(), QString("private@example.com"));
+
+        // Deleting is allowed while another profile remains.
+        QCOMPARE(backend.deleteProfile(true, QStringLiteral("email"), QStringLiteral("private")), QString());
+        QVERIFY(UserConfig::profileNames(UserConfig::ConfigKind::Send, QStringLiteral("email"))
+                    .contains(QStringLiteral("work")));
+        QVERIFY(!UserConfig::profileNames(UserConfig::ConfigKind::Send, QStringLiteral("email"))
+                     .contains(QStringLiteral("private")));
+
+        UserConfig::clearConfigRootOverrideForTests();
+    }
+
+    void backendExposesPluginSchemasForTheSettingsPages()
+    {
+        AppBackend backend;
+
+        const QVariantList sendSchemas = backend.pluginSettings(true);
+        QVERIFY(sendSchemas.size() >= 8);
+
+        bool sawEmailSchema = false;
+        for (const QVariant& entry : sendSchemas) {
+            const QVariantMap map = entry.toMap();
+            QVERIFY(!map.value("key").toString().isEmpty());
+            QVERIFY(!map.value("name").toString().isEmpty());
+            QVERIFY(map.contains("values"));
+            QVERIFY(map.contains("profiles"));
+
+            if (map.value("key").toString() != "email") {
+                continue;
+            }
+            sawEmailSchema = true;
+
+            const QVariantList schema = map.value("schema").toList();
+            QVERIFY(!schema.isEmpty());
+
+            bool sawRecipient = false;
+            for (const QVariant& fieldValue : schema) {
+                const QVariantMap field = fieldValue.toMap();
+                QVERIFY(!field.value("key").toString().isEmpty());
+                QVERIFY(!field.value("type").toString().isEmpty());
+                if (field.value("recipient").toBool()) {
+                    sawRecipient = true;
+                }
+            }
+            QVERIFY(sawRecipient);
+        }
+        QVERIFY(sawEmailSchema);
+
+        const QVariantList destinationSchemas = backend.pluginSettings(false);
+        QVERIFY(destinationSchemas.size() >= 5);
+
+        // Saving values through the facade validates them.
+        const QString error = backend.saveProfileValues(
+            true, QStringLiteral("email"), QStringLiteral("broken"),
+            QVariantMap{ { "host", "" }, { "messageTemplate", "Password: {password}" } });
+        QVERIFY(!error.isEmpty());
+    }
+
+    void archiveBrowserListsFiltersAndExtractsEntries()
+    {
+        QTemporaryDir temp;
+        QVERIFY(temp.isValid());
+
+        const QString input = writeFile(temp.filePath("hello.txt"), "browser payload");
+        QVERIFY(!input.isEmpty());
+        const QString output = temp.filePath("browser.zip");
+
+        auto* plugin = manager.archivePluginByName("ZIP Archive");
+        QVERIFY(plugin->createArchive({ input }, output, {}));
+
+        ArchiveBrowser browser;
+        QCOMPARE(browser.openArchive(output, QString()), QString());
+        QVERIFY(browser.archiveOpen());
+        QVERIFY(browser.itemCount() >= 1);
+
+        browser.setFilterText(QStringLiteral("hello"));
+        QVERIFY(browser.matchingCount() >= 1);
+        browser.setFilterText(QStringLiteral("nothing-matches-this"));
+        QCOMPARE(browser.matchingCount(), 0);
+        browser.setFilterText(QString());
+
+        const QString extractFolder = temp.filePath("extracted");
+        const QString extraction = browser.extractPaths({ QStringLiteral("hello.txt") }, extractFolder);
+        QVERIFY2(QFileInfo::exists(QDir(extractFolder).filePath("hello.txt")), qPrintable(extraction));
+        {
+            QFile extracted(QDir(extractFolder).filePath("hello.txt"));
+            QVERIFY(extracted.open(QIODevice::ReadOnly));
+            QCOMPARE(extracted.readAll(), QByteArray("browser payload"));
+        }
+
+        const QString extra = writeFile(temp.filePath("extra.txt"), "more");
+        QCOMPARE(browser.addFiles({ extra }), QString());
+        QVERIFY(browser.itemCount() >= 2);
+
+        browser.closeArchive();
+        QVERIFY(!browser.archiveOpen());
+        QCOMPARE(browser.itemCount(), 0);
     }
 
     void clipboardSenderReportsSuccessAndRejectsEmptyPassword()

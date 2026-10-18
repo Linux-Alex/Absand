@@ -3,43 +3,75 @@
 #include "TelegramPlugin.h"
 #include "core/SendHttpHelper.h"
 
-#include <QFormLayout>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QLineEdit>
 
-namespace { QLineEdit* field(QWidget* w, const char* n) { return w->findChild<QLineEdit*>(n); } }
-
-QVariantMap TelegramPlugin::metadata() const { return {{"name", name()}, {"version", version()}, {"description", description()}, {"author", "Absand Team"}, {"channel", channelName()}}; }
-QVariantMap TelegramPlugin::defaultConfiguration() const { return {{"botToken", ""}, {"chatId", ""}, {"messageTemplate", tr("Archive password: {password}")}}; }
-
-QWidget* TelegramPlugin::createConfigWidget(QWidget* parent)
+namespace {
+bool containsPlaceholder(const QVariantMap& config, const char* key)
 {
-    auto* widget = new QWidget(parent); auto* layout = new QFormLayout(widget);
-    auto add = [widget, layout](const QString& label, const char* name, bool secret = false) {
-        auto* edit = new QLineEdit(widget); edit->setObjectName(name);
-        if (secret) edit->setEchoMode(QLineEdit::Password); layout->addRow(label, edit);
-    };
-    add(tr("Bot token"), "botToken", true); add(tr("Chat ID"), "chatId"); add(tr("Message template"), "messageTemplate");
-    return widget;
+    return config.value(QString::fromLatin1(key)).toString().contains(QStringLiteral("{password}"));
+}
+} // namespace
+
+QVariantMap TelegramPlugin::metadata() const
+{
+    return { { "name", name() }, { "version", version() }, { "description", description() },
+             { "author", "Absand Team" }, { "channel", channelName() } };
 }
 
-void TelegramPlugin::loadConfigurationWidget(QWidget* widget, const QVariantMap& config) const
-{ const auto d = defaultConfiguration(); for (const char* k : {"botToken", "chatId", "messageTemplate"}) if (auto* e = field(widget, k)) e->setText(config.value(k, d.value(k)).toString()); }
-QVariantMap TelegramPlugin::saveConfigurationWidget(QWidget* widget) const
-{ QVariantMap c; for (const char* k : {"botToken", "chatId", "messageTemplate"}) if (auto* e = field(widget, k)) c[k] = e->text().trimmed(); return c; }
-bool TelegramPlugin::validateConfiguration(const QVariantMap& c, QString* error) const
+QVariantMap TelegramPlugin::defaultConfiguration() const
 {
-    if (c.value("botToken").toString().trimmed().isEmpty() || c.value("chatId").toString().trimmed().isEmpty()) { if (error) *error = tr("Bot token and chat ID are required."); return false; }
-    if (!c.value("messageTemplate").toString().contains("{password}")) { if (error) *error = tr("The message template must contain {password}."); return false; }
+    return { { "botToken", QString() },
+             { "chatId", QString() },
+             { "messageTemplate", tr("Archive password: {password}") } };
+}
+
+ConfigSchema TelegramPlugin::configSchema() const
+{
+    return {
+        { QStringLiteral("botToken"), tr("Bot token"), tr("Token created with @BotFather"), QString(),
+          ConfigField::Type::Password, ConfigField::Browse::None, {}, QVariant(), ConfigField::Required },
+        { QStringLiteral("chatId"), tr("Chat ID"), tr("Numeric chat or group ID"), QString(),
+          ConfigField::Type::Text, ConfigField::Browse::None, {}, QVariant(),
+          ConfigField::Required | ConfigField::Recipient },
+        { QStringLiteral("messageTemplate"), tr("Message template"), tr("Must contain {password}"), QString(),
+          ConfigField::Type::Multiline, ConfigField::Browse::None, {},
+          tr("Archive password: {password}"), ConfigField::Required }
+    };
+}
+
+bool TelegramPlugin::validateConfiguration(const QVariantMap& config, QString* error) const
+{
+    if (config.value(QStringLiteral("botToken")).toString().trimmed().isEmpty()
+        || config.value(QStringLiteral("chatId")).toString().trimmed().isEmpty()) {
+        if (error) *error = tr("Bot token and chat ID are required.");
+        return false;
+    }
+    if (!containsPlaceholder(config, "messageTemplate")) {
+        if (error) *error = tr("The message template must contain {password}.");
+        return false;
+    }
     return true;
 }
-void TelegramPlugin::send(const QString& password, const QVariantMap& c, std::function<void(bool, QString)> cb)
+
+void TelegramPlugin::send(const QString& password, const QVariantMap& config,
+                          std::function<void(bool, QString)> callback)
 {
-    QString error; if (password.isEmpty()) error = tr("Cannot send an empty password."); else if (!validateConfiguration(c, &error)) {} else {
-        const QString url = QStringLiteral("https://api.telegram.org/bot%1/sendMessage").arg(c.value("botToken").toString().trimmed());
-        const QByteArray body = QJsonDocument(QJsonObject{{"chat_id", c.value("chatId").toString().trimmed()}, {"text", SendHttpHelper::messageFromTemplate(c, password)}}).toJson(QJsonDocument::Compact);
-        if (SendHttpHelper::postJson(url, body, {}, &error)) { if (cb) cb(true, tr("Password sent over Telegram.")); return; }
+    QString error;
+    if (password.isEmpty()) {
+        error = tr("Cannot send an empty password.");
+    } else if (validateConfiguration(config, &error)) {
+        const QString url = QStringLiteral("https://api.telegram.org/bot%1/sendMessage")
+                                .arg(config.value(QStringLiteral("botToken")).toString().trimmed());
+        const QByteArray body = QJsonDocument(QJsonObject{
+            { QStringLiteral("chat_id"), config.value(QStringLiteral("chatId")).toString().trimmed() },
+            { QStringLiteral("text"), SendHttpHelper::messageFromTemplate(config, password) }
+        }).toJson(QJsonDocument::Compact);
+
+        if (SendHttpHelper::postJson(url, body, {}, &error)) {
+            if (callback) callback(true, tr("Password sent over Telegram."));
+            return;
+        }
     }
-    if (cb) cb(false, error);
+    if (callback) callback(false, error);
 }

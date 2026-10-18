@@ -7,9 +7,6 @@
 #include <QVariantMap>
 #include "interfaces/DestinationPluginInterface.h"
 
-class QLineEdit;
-class QWidget;
-
 class LocalFolderPlugin : public QObject, public DestinationPluginInterface
 {
     Q_OBJECT
@@ -18,24 +15,22 @@ class LocalFolderPlugin : public QObject, public DestinationPluginInterface
 
 public:
     explicit LocalFolderPlugin(QObject* parent = nullptr);
+    ~LocalFolderPlugin() override = default;
 
-    QString name() const override { return "Local Folder"; }
+    QString name() const override { return tr("Local Folder"); }
     QString version() const override { return "1.0.0"; }
-    QString description() const override { return "Save archives to a local folder"; }
+    QString description() const override { return tr("Save archives to a local folder"); }
     QVariantMap metadata() const override;
 
     QString channelName() const override { return "local_folder"; }
     QString configKey() const override { return "local_folder"; }
     bool requiresConfiguration() const override { return true; }
     QVariantMap defaultConfiguration() const override;
-    QWidget* createConfigWidget(QWidget* parent = nullptr) override;
-    void loadConfigurationWidget(QWidget* widget, const QVariantMap& config) const override;
-    QVariantMap saveConfigurationWidget(QWidget* widget) const override;
-    bool validateConfiguration(const QVariantMap& config, QString* errorMessage = nullptr) const override;
+    ConfigSchema configSchema() const override;
     QString suggestedLocalSaveFolder(const QVariantMap& config) const override;
     bool transferArchive(const QString& archivePath,
                          const QVariantMap& config,
-                         std::function<void(bool, QString)> resultCallback = nullptr) override;
+                         TransferCallback resultCallback = nullptr) override;
 };
 
 #endif // LOCALFOLDERPLUGIN_H

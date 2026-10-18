@@ -4,13 +4,11 @@
 #define DESTINATIONSETTINGSDIALOG_H
 
 #include <QDialog>
-#include <QHash>
-#include <QVariantMap>
+#include <QVector>
 
-class QTabWidget;
-class QWidget;
 class PluginManager;
-class DestinationPluginInterface;
+class ProfilePage;
+class QTabWidget;
 
 class DestinationSettingsDialog : public QDialog
 {
@@ -23,18 +21,9 @@ private slots:
     void accept() override;
 
 private:
-    struct Page
-    {
-        DestinationPluginInterface* plugin = nullptr;
-        QWidget* widget = nullptr;
-    };
-
-    void buildPages();
-    QVariantMap configForPlugin(DestinationPluginInterface* plugin) const;
-
     PluginManager* m_manager = nullptr;
     QTabWidget* m_tabs = nullptr;
-    QHash<QString, Page> m_pages;
+    QVector<ProfilePage*> m_pages;
 };
 
 #endif // DESTINATIONSETTINGSDIALOG_H

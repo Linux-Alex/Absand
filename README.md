@@ -7,17 +7,109 @@ Absand is a cross-platform Qt desktop application for creating encrypted ZIP and
 ## Features
 
 - ZIP and 7z archive creation, browsing, and optional encryption
-- local-folder, network-share, FTP, and SFTP destination plugins
-- password delivery through clipboard, Telegram, Matrix, or Microsoft Teams
+- local-folder, network-share, FTP, SFTP, e-mail (SMTP), and anonymous **web share** destination plugins
+- password delivery through clipboard, e-mail (SMTP), SMS, ntfy push, Telegram, Matrix,
+  Microsoft Teams, Discord, or any custom webhook (Slack, Google Chat, Mattermost, Gotify, ...)
+- several named profiles per channel, for example one per mail server or recipient
+- the recipient (address, phone number, chat, topic, folder) is chosen in the main window,
+  so a different destination needs no trip through the settings
 - configurable credentials, recipients, and message templates for every delivery plugin
 - English and Slovenian UI with a live language selector
+- Kirigami/QML user interface following KDE standards, with the same settings rendered
+  from plugin schemas as the classic widget dialog
 - Windows Explorer and Linux/KDE file-manager integration
 
-Passwords are sent only when archive creation succeeds and encryption is enabled. Network delivery uses the `curl` executable. Absand stores plugin settings as JSON in the current user's application-config directory; bot tokens, access tokens, FTP passwords, and webhook URLs are therefore not encrypted at rest. Protect that account and config directory, and use test credentials while developing.
+Passwords are sent only when archive creation succeeds and encryption is enabled. Network delivery uses the `curl` executable: Absand prefers a curl binary placed next to the application (the Windows installer ships one), falls back to `curl` from `PATH`, and needs curl 7.76 or newer for the Telegram, Matrix, and Teams channels. Transfers and delivery requests have timeouts, so an unreachable server can never hang the window forever; the progress dialog keeps the window repainting while a large archive is created.
+
+Absand stores plugin settings as JSON in the current user's application-config directory; bot tokens, access tokens, FTP passwords, and webhook URLs are therefore not encrypted at rest. Protect that account and config directory, and use test credentials while developing.
+
+## Web share (anonymous file hosts)
+
+The **Web share** destination uploads the finished archive to an anonymous file host and reports
+the download link; the link is shown in the summary, can be copied, and is available to password
+messages through the `{link}` placeholder:
+
+```text
+Archive password: {password}
+Download: {link}
+```
+
+Choose one provider per profile:
+
+| Provider | Limit | Notes |
+|---|---|---|
+| Gofile | no published limit | default, keyless JSON API; the upload server is cached to keep the API host relaxed |
+| Litterbox | 1 GB | temporary, deleted after the chosen expiry (1–72 h) |
+| temp.sh | 4 GB | temporary, three day expiry, largest anonymous limit |
+| x0.at | 1 GB | temporary, keeps the original file name |
+| catbox.moe | 200 MB | permanent store |
+| tmpfiles.org | 100 MB | short lived (1–48 h) |
+| pixeldrain | 20 GB | needs an API key in the account token field |
+| Custom endpoint | — | any host that accepts a multipart POST with a `file` field |
+
+The archive is written to the usual save folder first, so a failed upload never loses it, and the
+size limits are checked before the upload starts.
 
 ## Password delivery setup
 
-Select a channel beside **Send password via**, then choose **Configure channels...**.
+Select a channel beside **Send password via**, pick one of its **profiles**, and type the
+**recipient** (address, phone number, chat, topic, or folder) directly in the main window.
+Credentials and server settings live in the profiles, so the same recipient field can point at
+a colleague for one archive and at yourself for the next one.
+
+Profiles are managed with **Configure channels...** (delivery) and **Configure...** (destination):
+each tab lists the profiles of that plugin and offers **New**, **Rename**, and **Delete**.
+A plugin that has never been configured keeps a single profile called *Default*.
+
+All network channels run through the `curl` executable and need curl 7.76 or newer.
+
+### E-mail (SMTP)
+
+Works with any mail server and is the most universal channel; it is available both as a
+delivery channel and as a **destination** that mails the finished archive as an attachment.
+
+1. Enter the server (for example `smtp.gmail.com`), the port (587 for STARTTLS, 465 for
+   implicit TLS), and the security mode.
+2. Enter the username (usually the full address) and a password. Gmail, Outlook, and most
+   providers require an **app-specific password** when two-factor authentication is enabled.
+3. Fill in the sender address and, in the main window, the recipient. Several recipients can be
+   separated with commas.
+
+For the destination plugin the attachment size limit is 20 MB by default because most mail
+servers reject larger messages.
+
+### SMS
+
+SMS is the only channel that usually costs money; every provider below is reachable with the
+same configuration form:
+
+- **Textbelt** – the free tier allows one text per day (`key = textbelt`), suitable for trying.
+- **Twilio** – account SID plus auth token, sender number optional; trial credit covers testing.
+- **Vonage** – API key plus API secret.
+- **Custom URL** – any HTTP gateway, with `{recipient}` and `{message}` placeholders that
+  Absand percent-encodes for you.
+
+There is no reliable permanently free SMS API; carrier e-mail-to-SMS gateways have been shut
+down by most providers, so Absand does not pretend otherwise.
+
+### ntfy push
+
+[ntfy](https://ntfy.sh) needs no account: install the app, subscribe to a topic, and put the
+same topic into the profile. Choose a **long random topic**, because anybody who knows it can
+read the message. Self-hosted servers are supported by changing the server URL.
+
+### Discord
+
+Create a channel webhook (channel settings → Integrations → Webhooks), paste the URL into the
+profile, and the bot name if you like. The message template supports `{password}`.
+
+### Webhook (Slack, Google Chat, Mattermost, Gotify, custom)
+
+One plugin covers every service that accepts an incoming webhook: pick the service to choose
+the JSON format (Slack/Mattermost and Google Chat use `text`, Discord uses `content`,
+Gotify uses `message`), paste the URL, and optionally add an extra header such as
+`Authorization: Bearer ...`. The **Custom** service lets you write the request body yourself
+with `{message}` and `{password}` placeholders.
 
 ### Telegram
 
@@ -42,12 +134,49 @@ The Teams plugin uses a **Workflows incoming webhook**, which works well in a Mi
 
 Treat the webhook URL as a secret. This implementation does not require an Entra application registration or tenant/client secrets.
 
+## User interface
+
+Absand ships two front ends that share the same core, plugins, and plugin schemas:
+
+- **Kirigami/QML** (`src/qml/`, `src/app/AppBackend.*`, `src/app/ArchiveBrowser.*`) — the modern
+  KDE interface: an application window with a global drawer, Breeze-styled cards, an archive
+  browser page, and settings pages that are generated from the `ConfigField` schemas the
+  plugins declare. Archive creation, transfer, and password delivery report progress inline.
+- **Widgets** (`src/ui/`) — the classic dialog, used automatically when no matching KF6
+  Kirigami is installed.
+
+Select one with `-DABSAND_FRONTEND=auto|widgets|kirigami` (default `auto`). `auto` enables
+the Kirigami front end only when KF6 Kirigami ships QML modules for the very Qt installation
+Absand is compiled against, so a plain Qt build keeps working.
+
+Kirigami build requirements:
+
+```bash
+# Debian/Ubuntu
+sudo apt install libkf6kirigami-dev qml6-module-org-kde-kirigami qt6-declarative-dev
+
+# MSYS2/UCRT64
+pacman -S --needed mingw-w64-ucrt-x86_64-qt6-declarative mingw-w64-ucrt-x86_64-kirigami
+```
+
+The QML files are compiled into the executable, so nothing extra is installed; the runtime
+needs the Kirigami QML module of the platform (the Debian package depends on
+`qml6-module-org-kde-kirigami`, and `packaging/windows/bundle-runtime.sh` copies
+`org/kde` into the deployment directory).
+
+For headless smoke testing, `Absand --qml-selftest` instantiates the window and both settings
+pages and exits with a status; the release workflow runs it on Linux and Windows.
+
 ## Repository layout
 
-- `src/` — application, Widgets UI, models, interfaces, and core helpers
+- `src/` — application, front ends (`qml`, `ui`), models, interfaces, and core helpers
 - `plugins/archive/` — ZIP and 7z plugins
-- `plugins/destination/` — archive destination plugins
-- `plugins/send/` — clipboard, Telegram, Matrix, and Teams plugins
+- `plugins/destination/` — local folder, network share, FTP, SFTP, and e-mail plugins
+- `plugins/send/` — clipboard, e-mail, SMS, ntfy, Telegram, Matrix, Teams, Discord, and webhook plugins
+
+Plugins describe their settings as a schema (`ConfigField`); the settings dialog renders that
+schema today and the planned Kirigami/QML frontend renders the same schema with Qt Quick
+controls, so a plugin never ships UI code for a specific front end.
 - `translations/` — English and Slovenian Qt Linguist catalogs
 - `libs/bit7z/` and `libs/7zip/` — bundled archive dependencies
 - `tests/` — plugin integration tests
@@ -283,6 +412,8 @@ The bundling script runs `windeployqt`, copies curl and its transitive MSYS2 DLL
 - `deploy/bin/translations/absand_sl_SI.qm`
 
 Run `deploy/bin/Absand.exe` outside MSYS2 as the final smoke test. The generated Inno Setup installer registers the “Send with Absand” Explorer context menu for the current user and removes those entries during uninstall.
+
+The Windows build is a windows-subsystem (GUI) executable, so starting it never opens a console window. Because there is therefore no console to print to, Absand appends its diagnostics to `%LOCALAPPDATA%\Absand\logs\absand.log` (rotated at 1 MB); attach that file when reporting a problem.
 
 ## Updating translations
 

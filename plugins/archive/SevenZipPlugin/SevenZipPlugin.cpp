@@ -9,9 +9,12 @@
 #include <bit7z/bit7zlibrary.hpp>
 
 #include <QDebug>
+#include <QDir>
 #include <QFileInfo>
 
+#include <cstdint>
 #include <exception>
+#include <vector>
 
 namespace {
 
@@ -36,8 +39,6 @@ bool SevenZipPlugin::createArchive(const QStringList& files,
                                    const QString& password,
                                    std::function<void(int)> progressCallback)
 {
-    Q_UNUSED(progressCallback);
-
     if (files.isEmpty()) {
         qWarning() << "No input files supplied";
         return false;
@@ -56,6 +57,12 @@ bool SevenZipPlugin::createArchive(const QStringList& files,
         return false;
     }
 
+    const QFileInfo outputInfo(outputPath);
+    if (outputInfo.absolutePath().isEmpty() || !QDir().mkpath(outputInfo.absolutePath())) {
+        qWarning() << "Cannot create the destination folder for" << outputPath;
+        return false;
+    }
+
     qDebug() << "Using 7-Zip library:" << libraryPath;
     qDebug() << "Creating 7z archive:" << outputPath;
 
@@ -63,11 +70,38 @@ bool SevenZipPlugin::createArchive(const QStringList& files,
         bit7z::Bit7zLibrary library{ libraryPath.toStdString() };
         bit7z::BitFileCompressor compressor{ library, bit7z::BitFormat::SevenZip };
 
+        // Without an explicit overwrite mode 7-Zip refuses to replace an existing
+        // archive, which made "create archive" fail silently whenever the chosen
+        // file name already existed.
+        compressor.setOverwriteMode(bit7z::OverwriteMode::Overwrite);
+
         if (!password.isEmpty()) {
             compressor.setPassword(password.toStdString(), bit7z::EncryptionScope::DataAndHeaders);
         }
 
+        if (progressCallback) {
+            progressCallback(0);
+        }
+
+        std::uint64_t totalSize = 0;
+        compressor.setTotalCallback([&totalSize](std::uint64_t total) {
+            totalSize = total;
+        });
+        if (progressCallback) {
+            compressor.setProgressCallback([&totalSize, progressCallback](std::uint64_t processed) {
+                if (totalSize > 0) {
+                    const auto percent = static_cast<int>(
+                        (100.0 * static_cast<double>(processed)) / static_cast<double>(totalSize));
+                    progressCallback(qBound(0, percent, 100));
+                }
+                return true;
+            });
+        }
+
         compressor.compress(toBit7zPaths(files), outputPath.toStdString());
+        if (progressCallback) {
+            progressCallback(100);
+        }
         qDebug() << "Archive created successfully:" << outputPath;
         return true;
     } catch (const bit7z::BitException& ex) {

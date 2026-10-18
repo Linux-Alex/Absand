@@ -1,0 +1,9 @@
+{
+  "name": "Discord",
+  "version": "1.0.0",
+  "description": "Post the archive password through a Discord webhook",
+  "author": "Absand Team",
+  "license": "MPL-2.0",
+  "channel": "discord",
+  "requiresConfiguration": true
+}

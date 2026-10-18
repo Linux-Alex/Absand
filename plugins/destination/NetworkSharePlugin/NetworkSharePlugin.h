@@ -7,8 +7,6 @@
 #include <QVariantMap>
 #include "interfaces/DestinationPluginInterface.h"
 
-class QWidget;
-
 class NetworkSharePlugin : public QObject, public DestinationPluginInterface
 {
     Q_OBJECT
@@ -17,24 +15,22 @@ class NetworkSharePlugin : public QObject, public DestinationPluginInterface
 
 public:
     explicit NetworkSharePlugin(QObject* parent = nullptr);
+    ~NetworkSharePlugin() override = default;
 
-    QString name() const override { return "Network Share"; }
+    QString name() const override { return tr("Network Share"); }
     QString version() const override { return "1.0.0"; }
-    QString description() const override { return "Save archives to a network share or mounted share"; }
+    QString description() const override { return tr("Save archives to a network share or mounted share"); }
     QVariantMap metadata() const override;
 
     QString channelName() const override { return "network_share"; }
     QString configKey() const override { return "network_share"; }
     bool requiresConfiguration() const override { return true; }
     QVariantMap defaultConfiguration() const override;
-    QWidget* createConfigWidget(QWidget* parent = nullptr) override;
-    void loadConfigurationWidget(QWidget* widget, const QVariantMap& config) const override;
-    QVariantMap saveConfigurationWidget(QWidget* widget) const override;
-    bool validateConfiguration(const QVariantMap& config, QString* errorMessage = nullptr) const override;
+    ConfigSchema configSchema() const override;
     QString suggestedLocalSaveFolder(const QVariantMap& config) const override;
     bool transferArchive(const QString& archivePath,
                          const QVariantMap& config,
-                         std::function<void(bool, QString)> resultCallback = nullptr) override;
+                         TransferCallback resultCallback = nullptr) override;
 };
 
 #endif // NETWORKSHAREPLUGIN_H

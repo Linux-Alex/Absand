@@ -5,20 +5,10 @@
 #include "core/TransferHelpers.h"
 
 #include <QDir>
-#include <QFileDialog>
 #include <QFileInfo>
-#include <QFormLayout>
-#include <QHBoxLayout>
-#include <QLineEdit>
-#include <QPushButton>
 #include <QStandardPaths>
 
 namespace {
-
-QLineEdit* line(QWidget* widget, const char* name)
-{
-    return widget->findChild<QLineEdit*>(QString::fromUtf8(name));
-}
 
 QString defaultSaveFolder()
 {
@@ -27,26 +17,6 @@ QString defaultSaveFolder()
         folder = QDir::homePath();
     }
     return folder;
-}
-
-QWidget* folderRow(QWidget* parent, QLineEdit*& editOut, const QString& objectName, const QString& title)
-{
-    auto* row = new QWidget(parent);
-    auto* layout = new QHBoxLayout(row);
-    layout->setContentsMargins(0, 0, 0, 0);
-    auto* edit = new QLineEdit(row);
-    edit->setObjectName(objectName);
-    auto* browse = new QPushButton(QObject::tr("Browse..."), row);
-    layout->addWidget(edit, 1);
-    layout->addWidget(browse);
-    QObject::connect(browse, &QPushButton::clicked, row, [edit, row, title]() {
-        const QString dir = QFileDialog::getExistingDirectory(row, title, edit->text());
-        if (!dir.isEmpty()) {
-            edit->setText(dir);
-        }
-    });
-    editOut = edit;
-    return row;
 }
 
 } // namespace
@@ -79,70 +49,44 @@ QVariantMap FTPDestinationPlugin::defaultConfiguration() const
     };
 }
 
-QWidget* FTPDestinationPlugin::createConfigWidget(QWidget* parent)
+ConfigSchema FTPDestinationPlugin::configSchema() const
 {
-    auto* widget = new QWidget(parent);
-    auto* layout = new QFormLayout(widget);
-
-    auto* host = new QLineEdit(widget);
-    host->setObjectName("host");
-    layout->addRow(tr("Host"), host);
-
-    auto* port = new QLineEdit(widget);
-    port->setObjectName("port");
-    layout->addRow(tr("Port"), port);
-
-    auto* username = new QLineEdit(widget);
-    username->setObjectName("username");
-    layout->addRow(tr("Username"), username);
-
-    auto* password = new QLineEdit(widget);
-    password->setObjectName("password");
-    password->setEchoMode(QLineEdit::Password);
-    layout->addRow(tr("Password"), password);
-
-    auto* remotePath = new QLineEdit(widget);
-    remotePath->setObjectName("remotePath");
-    layout->addRow(tr("Remote folder"), remotePath);
-
-    QLineEdit* saveFolder = nullptr;
-    layout->addRow(tr("Default save folder"), folderRow(widget, saveFolder, "saveFolder", tr("Choose Save Folder")));
-
-    return widget;
-}
-
-void FTPDestinationPlugin::loadConfigurationWidget(QWidget* widget, const QVariantMap& config) const
-{
-    const QVariantMap defaults = defaultConfiguration();
-    if (auto* edit = line(widget, "host")) edit->setText(config.value("host", defaults.value("host")).toString());
-    if (auto* edit = line(widget, "port")) edit->setText(QString::number(config.value("port", defaults.value("port")).toInt()));
-    if (auto* edit = line(widget, "username")) edit->setText(config.value("username", defaults.value("username")).toString());
-    if (auto* edit = line(widget, "password")) edit->setText(config.value("password", defaults.value("password")).toString());
-    if (auto* edit = line(widget, "remotePath")) edit->setText(config.value("remotePath", defaults.value("remotePath")).toString());
-    if (auto* edit = line(widget, "saveFolder")) edit->setText(config.value("saveFolder", defaults.value("saveFolder")).toString());
-}
-
-QVariantMap FTPDestinationPlugin::saveConfigurationWidget(QWidget* widget) const
-{
-    QVariantMap config;
-    if (auto* edit = line(widget, "host")) config["host"] = edit->text().trimmed();
-    if (auto* edit = line(widget, "port")) config["port"] = edit->text().trimmed().toInt();
-    if (auto* edit = line(widget, "username")) config["username"] = edit->text().trimmed();
-    if (auto* edit = line(widget, "password")) config["password"] = edit->text();
-    if (auto* edit = line(widget, "remotePath")) config["remotePath"] = edit->text().trimmed();
-    if (auto* edit = line(widget, "saveFolder")) config["saveFolder"] = edit->text().trimmed();
-    return config;
+    return {
+        { QStringLiteral("host"), tr("Host"), tr("Server name or address"), QStringLiteral("ftp.example.com"),
+          ConfigField::Type::Text, ConfigField::Browse::None, {}, QVariant(), ConfigField::Required },
+        { QStringLiteral("port"), tr("Port"), QString(), QStringLiteral("21"),
+          ConfigField::Type::Integer, ConfigField::Browse::None, {}, 21, ConfigField::Required },
+        { QStringLiteral("username"), tr("Username"), QString(), QString(),
+          ConfigField::Type::Text, ConfigField::Browse::None, {}, QVariant() },
+        { QStringLiteral("password"), tr("Password"), QString(), QString(),
+          ConfigField::Type::Password, ConfigField::Browse::None, {}, QVariant() },
+        { QStringLiteral("remotePath"), tr("Remote folder"), tr("Folder on the server that receives the archive"),
+          QStringLiteral("/"), ConfigField::Type::Text, ConfigField::Browse::None, {},
+          QStringLiteral("/"), ConfigField::Recipient },
+        { QStringLiteral("saveFolder"), tr("Default save folder"),
+          tr("Where the archive is written before it is uploaded"), QString(),
+          ConfigField::Type::Text, ConfigField::Browse::Directory, {},
+          defaultSaveFolder(), ConfigField::Required }
+    };
 }
 
 bool FTPDestinationPlugin::validateConfiguration(const QVariantMap& config, QString* errorMessage) const
 {
-    const QString host = config.value("host").toString().trimmed();
-    if (host.isEmpty()) {
+    if (config.value(QStringLiteral("host")).toString().trimmed().isEmpty()) {
         if (errorMessage) {
             *errorMessage = tr("Please enter the FTP host.");
         }
         return false;
     }
+
+    const int port = config.value(QStringLiteral("port"), 21).toInt();
+    if (port <= 0 || port > 65535) {
+        if (errorMessage) {
+            *errorMessage = tr("Please enter a port between 1 and 65535.");
+        }
+        return false;
+    }
+
     return true;
 }
 
@@ -153,7 +97,7 @@ QString FTPDestinationPlugin::suggestedLocalSaveFolder(const QVariantMap& config
 
 bool FTPDestinationPlugin::transferArchive(const QString& archivePath,
                                            const QVariantMap& config,
-                                           std::function<void(bool, QString)> resultCallback)
+                                           TransferCallback resultCallback)
 {
     const QString host = config.value("host").toString().trimmed();
     const int port = config.value("port", 21).toInt();
@@ -164,6 +108,8 @@ bool FTPDestinationPlugin::transferArchive(const QString& archivePath,
 
     QStringList args;
     args << "-T" << archivePath;
+    // Create missing remote directories instead of failing the whole upload.
+    args << "--ftp-create-dirs";
     if (!username.isEmpty() || !password.isEmpty()) {
         args << "--user" << (username + ":" + password);
     }
@@ -172,7 +118,7 @@ bool FTPDestinationPlugin::transferArchive(const QString& archivePath,
     QString error;
     const bool ok = TransferHelpers::uploadWithCurl(args, &error);
     if (resultCallback) {
-        resultCallback(ok, ok ? tr("Uploaded to FTP server") : error);
+        resultCallback(ok, ok ? tr("Uploaded to FTP server") : error, QString());
     }
     return ok;
 }

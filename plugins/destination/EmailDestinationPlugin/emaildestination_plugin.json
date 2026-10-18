@@ -1,0 +1,9 @@
+{
+  "name": "E-mail (SMTP)",
+  "version": "1.0.0",
+  "description": "Send the finished archive as an e-mail attachment",
+  "author": "Absand Team",
+  "license": "MPL-2.0",
+  "channel": "email",
+  "requiresConfiguration": true
+}

@@ -25,6 +25,51 @@ set(CMAKE_VISIBILITY_INLINED_HIDDEN ON)
 # Find Qt
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets LinguistTools)
 
+# ============================================
+# FRONTEND SELECTION
+# ============================================
+# The Kirigami/QML front end needs a KF6 Kirigami that was built for the very
+# same Qt installation Absand is compiled against, because it ships QML modules
+# inside that Qt's import directory. "auto" checks that before enabling it and
+# otherwise keeps the classic widget dialog.
+set(ABSAND_FRONTEND "auto" CACHE STRING "Frontend to build: auto, widgets, or kirigami")
+set_property(CACHE ABSAND_FRONTEND PROPERTY STRINGS auto widgets kirigami)
+
+set(ABSAND_KIRIGAMI_QML_AVAILABLE OFF)
+set(_absand_qml_import_root "")
+if(TARGET Qt6::qmake)
+    get_target_property(_absand_qmake Qt6::qmake IMPORTED_LOCATION)
+    if(_absand_qmake)
+        execute_process(COMMAND "${_absand_qmake}" -query QT_INSTALL_QML
+                        OUTPUT_VARIABLE _absand_qml_import_root
+                        OUTPUT_STRIP_TRAILING_WHITESPACE
+                        ERROR_QUIET)
+    endif()
+endif()
+if(_absand_qml_import_root AND EXISTS "${_absand_qml_import_root}/org/kde/kirigami")
+    set(ABSAND_KIRIGAMI_QML_AVAILABLE ON)
+endif()
+
+set(ABSAND_USE_KIRIGAMI OFF)
+if(ABSAND_FRONTEND STREQUAL "kirigami")
+    find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2)
+    find_package(KF6Kirigami REQUIRED)
+    if(NOT ABSAND_KIRIGAMI_QML_AVAILABLE)
+        message(WARNING "KF6 Kirigami was found, but its QML module is not in "
+                        "${_absand_qml_import_root}. Install the Kirigami QML module for this Qt "
+                        "installation, or the window will fail to load at runtime.")
+    endif()
+    set(ABSAND_USE_KIRIGAMI ON)
+elseif(ABSAND_FRONTEND STREQUAL "auto")
+    find_package(KF6Kirigami QUIET)
+    if(KF6Kirigami_FOUND AND ABSAND_KIRIGAMI_QML_AVAILABLE)
+        find_package(Qt6 REQUIRED COMPONENTS Quick QuickControls2)
+        set(ABSAND_USE_KIRIGAMI ON)
+    endif()
+endif()
+message(STATUS "Absand frontend: ${ABSAND_FRONTEND} (Kirigami: ${ABSAND_USE_KIRIGAMI}, "
+               "QML import root: ${_absand_qml_import_root})")
+
 # Find libzip (with AES-256 support)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBZIP REQUIRED libzip)
@@ -64,39 +109,73 @@ set(CORE_SOURCES
     src/core/UserConfig.cpp
     src/core/TransferHelpers.cpp
     src/core/ThemeManager.cpp
-    src/ui/MainDialog.cpp
     src/ui/ArchiveBrowserDialog.cpp
-    src/ui/DestinationSettingsDialog.cpp
-    src/ui/SendSettingsDialog.cpp
-    src/ui/FileDropListWidget.cpp
-    src/TestHarness.cpp
-    src/TestHarness.h
 )
+
+if(ABSAND_USE_KIRIGAMI)
+    # Kirigami/QML front end: the window lives in src/qml and is rendered from
+    # the plugin schemas; the archive browser stays a widget dialog.
+    list(APPEND CORE_SOURCES
+        src/app/AppBackend.cpp
+        src/app/ArchiveBrowser.cpp
+    )
+else()
+    list(APPEND CORE_SOURCES
+        src/ui/MainDialog.cpp
+        src/ui/DestinationSettingsDialog.cpp
+        src/ui/SendSettingsDialog.cpp
+        src/ui/ProfilePage.cpp
+        src/ui/FileDropListWidget.cpp
+        src/TestHarness.cpp
+        src/TestHarness.h
+    )
+endif()
 
 set(CORE_HEADERS
     src/models/FilePathListModel.h
     src/models/ArchiveEntryModel.h
     src/core/PluginManager.h
+    src/core/CurlExecutable.h
+    src/core/ProcessWait.h
+    src/core/SendHttpHelper.h
+    src/core/SmtpMessage.h
+    src/core/PluginConfigForm.h
+    src/core/WebShareUpload.h
     src/core/SevenZipRuntime.h
     src/core/UserConfig.h
     src/core/TransferHelpers.h
     src/core/ThemeManager.h
-    src/ui/MainDialog.h
     src/ui/ArchiveBrowserDialog.h
-    src/ui/DestinationSettingsDialog.h
-    src/ui/SendSettingsDialog.h
-    src/ui/FileDropListWidget.h
-    src/TestHarness.h
+    src/interfaces/ConfigSchema.h
     src/interfaces/PluginInterface.h
     src/interfaces/ArchivePluginInterface.h
     src/interfaces/SendPluginInterface.h
     src/interfaces/DestinationPluginInterface.h
 )
 
+if(ABSAND_USE_KIRIGAMI)
+    list(APPEND CORE_HEADERS src/app/AppBackend.h src/app/ArchiveBrowser.h)
+else()
+    list(APPEND CORE_HEADERS
+        src/ui/MainDialog.h
+        src/ui/DestinationSettingsDialog.h
+        src/ui/SendSettingsDialog.h
+        src/ui/ProfilePage.h
+        src/ui/FileDropListWidget.h
+        src/TestHarness.h
+    )
+endif()
+
 add_executable(Absand
     ${CORE_SOURCES}
     ${CORE_HEADERS}
 )
+
+# Without the GUI subsystem Windows starts Absand with a console window next to
+# the main window. Diagnostics are written to the log file installed in main.cpp.
+if(WIN32)
+    set_target_properties(Absand PROPERTIES WIN32_EXECUTABLE TRUE)
+endif()
 
 target_link_libraries(Absand PRIVATE
     Qt6::Core
@@ -104,6 +183,36 @@ target_link_libraries(Absand PRIVATE
     ${LIBZIP_LIBRARIES}
     bit7z
 )
+
+if(ABSAND_USE_KIRIGAMI)
+    target_compile_definitions(Absand PRIVATE ABSAND_KIRIGAMI_FRONTEND)
+    target_link_libraries(Absand PRIVATE Qt6::Quick Qt6::QuickControls2 KF6::Kirigami)
+    # The QML files live in src/qml, so they need a resource alias to end up at
+    # the module root (qrc:/qt/qml/Absand/Main.qml) instead of below src/qml/.
+    set(ABSAND_QML_FILES
+        src/qml/Main.qml
+        src/qml/SchemaForm.qml
+        src/qml/SettingsPage.qml
+        src/qml/ArchiveBrowserPage.qml
+    )
+    foreach(_absand_qml IN LISTS ABSAND_QML_FILES)
+        get_filename_component(_absand_qml_name "${_absand_qml}" NAME)
+        set_source_files_properties("${_absand_qml}" PROPERTIES
+            QT_RESOURCE_ALIAS "${_absand_qml_name}")
+    endforeach()
+
+    # The module output must not share a name with the executable in the build
+    # directory, hence the explicit output directory.
+    # RESOURCE_PREFIX has to be explicit: without it the module would live at
+    # :/Absand instead of :/qt/qml/Absand and the engine would not find it.
+    qt_add_qml_module(Absand
+        URI Absand
+        VERSION 1.0
+        RESOURCE_PREFIX "/qt/qml"
+        OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/qml-module"
+        QML_FILES ${ABSAND_QML_FILES}
+    )
+endif()
 
 target_include_directories(Absand PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -366,6 +475,10 @@ if(UNIX AND NOT APPLE)
     set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
     set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
     set(CPACK_DEBIAN_PACKAGE_DEPENDS "curl")
+    if(ABSAND_USE_KIRIGAMI)
+        # The Kirigami QML module is not detected by shlibdeps.
+        string(APPEND CPACK_DEBIAN_PACKAGE_DEPENDS ", qml6-module-org-kde-kirigami")
+    endif()
     set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
 endif()
 

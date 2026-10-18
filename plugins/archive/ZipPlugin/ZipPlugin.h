@@ -54,9 +54,6 @@ public:
         return {"AES-256"};
     }
     QString defaultExtension() const override { return "zip"; }
-
-private:
-    int getEncryptionMethod(const QString& method) const;
 };
 
 #endif // ZIPPLUGIN_H

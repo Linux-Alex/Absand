@@ -7,8 +7,6 @@
 #include <QVariantMap>
 #include "interfaces/DestinationPluginInterface.h"
 
-class QWidget;
-
 class SFTPDestinationPlugin : public QObject, public DestinationPluginInterface
 {
     Q_OBJECT
@@ -17,24 +15,23 @@ class SFTPDestinationPlugin : public QObject, public DestinationPluginInterface
 
 public:
     explicit SFTPDestinationPlugin(QObject* parent = nullptr);
+    ~SFTPDestinationPlugin() override = default;
 
-    QString name() const override { return "SFTP"; }
+    QString name() const override { return tr("SFTP"); }
     QString version() const override { return "1.0.0"; }
-    QString description() const override { return "Upload archives to an SFTP server"; }
+    QString description() const override { return tr("Upload archives to an SFTP server"); }
     QVariantMap metadata() const override;
 
     QString channelName() const override { return "sftp"; }
     QString configKey() const override { return "sftp"; }
     bool requiresConfiguration() const override { return true; }
     QVariantMap defaultConfiguration() const override;
-    QWidget* createConfigWidget(QWidget* parent = nullptr) override;
-    void loadConfigurationWidget(QWidget* widget, const QVariantMap& config) const override;
-    QVariantMap saveConfigurationWidget(QWidget* widget) const override;
+    ConfigSchema configSchema() const override;
     bool validateConfiguration(const QVariantMap& config, QString* errorMessage = nullptr) const override;
     QString suggestedLocalSaveFolder(const QVariantMap& config) const override;
     bool transferArchive(const QString& archivePath,
                          const QVariantMap& config,
-                         std::function<void(bool, QString)> resultCallback = nullptr) override;
+                         TransferCallback resultCallback = nullptr) override;
 };
 
 #endif // SFTPDESTINATIONPLUGIN_H

@@ -5,6 +5,7 @@
 
 #include <QObject>
 #include <QDir>
+#include <QHash>
 #include <QVector>
 #include <QStringList>
 #include <QVariantMap>
@@ -63,6 +64,7 @@ private:
     
     QVector<PluginInterface*> m_plugins;
     QVector<QPluginLoader*> m_loaders;
+    QHash<QObject*, QPluginLoader*> m_loaderForPlugin;
     QVector<ArchivePluginInterface*> m_archivePlugins;
     QVector<SendPluginInterface*> m_sendPlugins;
     QVector<DestinationPluginInterface*> m_destinationPlugins;

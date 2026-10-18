@@ -16,10 +16,23 @@ if [[ ! -f "$app" ]]; then
     exit 1
 fi
 
-windeployqt.exe --release --compiler-runtime --dir "$bin_dir" "$app"
+# --qmldir makes windeployqt scan the QML sources so the Qt Quick modules the
+# Kirigami front end imports are deployed too.
+qml_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../src/qml" && pwd)"
+windeployqt.exe --release --compiler-runtime --qmldir "$qml_dir" --dir "$bin_dir" "$app"
 
 # Absand invokes curl at runtime for network destinations and password channels.
 cp -f /ucrt64/bin/curl.exe "$bin_dir/curl.exe"
+
+# The Kirigami front end imports org.kde.kirigami at runtime; ship those QML
+# modules next to the Qt ones that windeployqt copied.
+for _kiri_qml in /ucrt64/share/qt6/qml/org/kde /ucrt64/lib/qt6/qml/org/kde; do
+    if [[ -d "$_kiri_qml" ]]; then
+        mkdir -p "$bin_dir/qml/org"
+        cp -ru "$_kiri_qml" "$bin_dir/qml/org/"
+        break
+    fi
+done
 
 # Copy the complete transitive UCRT64 dependency set for the executable, Qt,
 # plugins, 7-Zip runtime, libzip, and curl. Repeat because copied DLLs can add

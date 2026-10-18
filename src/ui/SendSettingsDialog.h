@@ -4,26 +4,26 @@
 #define SENDSETTINGSDIALOG_H
 
 #include <QDialog>
-#include <QHash>
+#include <QVector>
 
 class PluginManager;
+class ProfilePage;
 class QTabWidget;
-class SendPluginInterface;
-class QWidget;
 
 class SendSettingsDialog : public QDialog
 {
     Q_OBJECT
+
 public:
     explicit SendSettingsDialog(PluginManager* manager, QWidget* parent = nullptr);
+
 private slots:
     void accept() override;
+
 private:
-    struct Page { SendPluginInterface* plugin = nullptr; QWidget* widget = nullptr; };
-    QVariantMap configForPlugin(SendPluginInterface* plugin) const;
     PluginManager* m_manager = nullptr;
     QTabWidget* m_tabs = nullptr;
-    QHash<QString, Page> m_pages;
+    QVector<ProfilePage*> m_pages;
 };
 
-#endif
+#endif // SENDSETTINGSDIALOG_H
