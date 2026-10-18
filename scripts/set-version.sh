@@ -9,6 +9,6 @@ if [[ $# -ne 1 || ! $1 =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 fi
 
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-printf '%s\n' "$1" > "$repo_root/VERSION"
+printf '%s\n' "$1" > "$repo_root/VERSION.txt"
 echo "Absand version set to $1"
 echo "Release tag must be: v$1"

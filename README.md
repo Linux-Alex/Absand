@@ -183,7 +183,7 @@ controls, so a plugin never ships UI code for a specific front end.
 
 ## Versions and automatic releases
 
-The current application and package version is stored in the root [`VERSION`](VERSION) file. Absand uses semantic versions in `MAJOR.MINOR.PATCH` form, such as `1.2.3`. CMake reads this file for the application version and Linux package metadata.
+The current application and package version is stored in the root [`VERSION.txt`](VERSION.txt) file. Absand uses semantic versions in `MAJOR.MINOR.PATCH` form, such as `1.2.3`. CMake reads this file for the application version and Linux package metadata.
 
 Pushing a matching tag such as `v1.2.3` starts the GitHub Actions release workflow. It builds and tests both platforms, produces these installers, generates SHA-256 checksums, and publishes them on the GitHub Releases page:
 
@@ -200,7 +200,7 @@ set -e
 
 ./scripts/set-version.sh 1.0.1
 
-git add VERSION CMakeLists.txt src/main.cpp README.md \
+git add VERSION.txt CMakeLists.txt src/main.cpp README.md \
   .github/workflows/release.yml packaging scripts
 git commit -m "chore: release Absand 1.0.1"
 git tag -a v1.0.1 -m "Absand 1.0.1"
@@ -209,7 +209,7 @@ git push origin main
 git push origin v1.0.1
 ```
 
-The tag must exactly equal `v` followed by the content of `VERSION`; a mismatch intentionally fails the release. You can test installer generation without publishing a release by opening **Actions → Build installers and publish release → Run workflow** on GitHub. Manually triggered runs keep both installers as workflow artifacts.
+The tag must exactly equal `v` followed by the content of `VERSION.txt`; a mismatch intentionally fails the release. You can test installer generation without publishing a release by opening **Actions → Build installers and publish release → Run workflow** on GitHub. Manually triggered runs keep both installers as workflow artifacts.
 
 The generated Windows installer is not code-signed. Windows SmartScreen may therefore warn users until you add a trusted code-signing certificate to the release workflow.
 
@@ -270,7 +270,7 @@ After installing the dependencies above, this complete block builds the same `.d
 ```bash
 set -e
 
-version="$(tr -d '[:space:]' < VERSION)"
+version="$(tr -d '[:space:]' < VERSION.txt)"
 rm -rf build-deb release-artifacts
 
 cmake -S . -B build-deb -G Ninja \

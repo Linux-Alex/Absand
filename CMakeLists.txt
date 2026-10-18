@@ -2,10 +2,12 @@
 
 cmake_minimum_required(VERSION 3.20)
 
-file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" ABSAND_VERSION LIMIT_COUNT 1)
+# Named VERSION.txt: a file called "version" in an include directory would break
+# "#include <version>" on case-insensitive file systems such as Windows.
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION.txt" ABSAND_VERSION LIMIT_COUNT 1)
 string(STRIP "${ABSAND_VERSION}" ABSAND_VERSION)
 if(NOT ABSAND_VERSION MATCHES "^[0-9]+\\.[0-9]+\\.[0-9]+$")
-    message(FATAL_ERROR "VERSION must contain a semantic version such as 1.2.3")
+    message(FATAL_ERROR "VERSION.txt must contain a semantic version such as 1.2.3")
 endif()
 
 project(Absand VERSION "${ABSAND_VERSION}" LANGUAGES C CXX)
@@ -173,8 +175,12 @@ add_executable(Absand
 
 # Without the GUI subsystem Windows starts Absand with a console window next to
 # the main window. Diagnostics are written to the log file installed in main.cpp.
+# Qt6::EntryPoint supplies the WinMain shim for a plain main() on MinGW.
 if(WIN32)
     set_target_properties(Absand PROPERTIES WIN32_EXECUTABLE TRUE)
+    if(TARGET Qt6::EntryPoint)
+        target_link_libraries(Absand PRIVATE Qt6::EntryPoint)
+    endif()
 endif()
 
 target_link_libraries(Absand PRIVATE

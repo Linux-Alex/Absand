@@ -197,8 +197,10 @@ bool ZipPlugin::createArchive(const QStringList& files,
         } else {
             zip_error_t zipError;
             zip_error_init(&zipError);
+            // ZIP_LENGTH_TO_END is supported by every libzip release, while
+            // ZIP_LENGTH_UNCHECKED only appeared in 1.10.
             zip_source_t* source = zip_source_file_create(
-                readablePath(entry.sourcePath).constData(), 0, ZIP_LENGTH_UNCHECKED, &zipError);
+                readablePath(entry.sourcePath).constData(), 0, ZIP_LENGTH_TO_END, &zipError);
             if (!source) {
                 qWarning() << "Cannot read" << entry.sourcePath << ":"
                            << zip_error_strerror(&zipError);
