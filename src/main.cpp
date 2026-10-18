@@ -127,7 +127,11 @@ int main(int argc, char* argv[])
     QTranslator translator;
     loadLanguage(app, translator, UserConfig::language());
 
+    // Breeze when available (org.kde.desktop comes with qqc2-desktop-style),
+    // Fusion otherwise, so a missing style never prevents the window from
+    // loading.
     QQuickStyle::setStyle(QStringLiteral("org.kde.desktop"));
+    QQuickStyle::setFallbackStyle(QStringLiteral("Fusion"));
 
     AppBackend backend;
     ArchiveBrowser browser;

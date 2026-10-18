@@ -127,8 +127,7 @@ bool uploadWithCurl(const QStringList& arguments, QString* errorMessage, int tim
         if (errorMessage) {
             *errorMessage = QString::fromLocal8Bit(process.readAllStandardError()).trimmed();
             if (errorMessage->isEmpty()) {
-                errorMessage->assign(QStringLiteral("curl failed with exit code %1")
-                                         .arg(process.exitCode()));
+                *errorMessage = QStringLiteral("curl failed with exit code %1").arg(process.exitCode());
             }
         }
         return false;

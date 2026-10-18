@@ -483,7 +483,8 @@ if(UNIX AND NOT APPLE)
     set(CPACK_DEBIAN_PACKAGE_DEPENDS "curl")
     if(ABSAND_USE_KIRIGAMI)
         # The Kirigami QML module is not detected by shlibdeps.
-        string(APPEND CPACK_DEBIAN_PACKAGE_DEPENDS ", qml6-module-org-kde-kirigami")
+        string(APPEND CPACK_DEBIAN_PACKAGE_DEPENDS
+               ", qml6-module-org-kde-kirigami, qml6-module-org-kde-desktop")
     endif()
     set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
 endif()
