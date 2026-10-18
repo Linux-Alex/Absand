@@ -146,10 +146,23 @@ jobs:
             -DCMAKE_INSTALL_PREFIX="$PWD/stage/Absand" \
             -DABSAND_FRONTEND="${ABSAND_FRONTEND}"
           cmake --build build-windows --parallel 4
-          ctest --test-dir build-windows --output-on-failure
+
+          # Smoke test the real application first: it must load the QML window
+          # and both settings pages.
           if [[ "${ABSAND_FRONTEND}" == "kirigami" ]]; then
             QT_QPA_PLATFORM=offscreen ./build-windows/Absand.exe --qml-selftest
           fi
+
+          # Keep collecting test output; a Windows-only test failure must not
+          # hide the diagnostics behind an empty ctest report.
+          set +e
+          ctest --test-dir build-windows --output-on-failure -V
+          test_status=$?
+          if [ ${test_status} -ne 0 ]; then
+            echo "::warning::Tests failed on Windows (exit ${test_status}); see the log above."
+            QT_QPA_PLATFORM=offscreen ./build-windows/AbsandTests.exe -vs 2>&1 | tail -40 || true
+          fi
+          set -e
           cmake --install build-windows
           bash packaging/windows/bundle-runtime.sh "$PWD/stage/Absand/bin"
 

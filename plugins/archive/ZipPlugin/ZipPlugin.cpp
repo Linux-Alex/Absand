@@ -21,6 +21,17 @@
 #define ZIP_EM_AES_256 0x0103
 #endif
 
+// libzip renamed its "read the whole file" length constant over time: releases
+// before 1.6 used -1, 1.6 added ZIP_LENGTH_TO_END, and 1.10 added
+// ZIP_LENGTH_UNCHECKED. Pick whichever the installed header provides.
+#if defined(ZIP_LENGTH_UNCHECKED)
+constexpr zip_int64_t kWholeFileLength = ZIP_LENGTH_UNCHECKED;
+#elif defined(ZIP_LENGTH_TO_END)
+constexpr zip_int64_t kWholeFileLength = ZIP_LENGTH_TO_END;
+#else
+constexpr zip_int64_t kWholeFileLength = -1;
+#endif
+
 /**
  * libzip reaches the filesystem through the C library, so archive and input
  * paths must be handed over in the same narrow form that fopen() expects: the
@@ -197,10 +208,8 @@ bool ZipPlugin::createArchive(const QStringList& files,
         } else {
             zip_error_t zipError;
             zip_error_init(&zipError);
-            // ZIP_LENGTH_TO_END is supported by every libzip release, while
-            // ZIP_LENGTH_UNCHECKED only appeared in 1.10.
             zip_source_t* source = zip_source_file_create(
-                readablePath(entry.sourcePath).constData(), 0, ZIP_LENGTH_TO_END, &zipError);
+                readablePath(entry.sourcePath).constData(), 0, kWholeFileLength, &zipError);
             if (!source) {
                 qWarning() << "Cannot read" << entry.sourcePath << ":"
                            << zip_error_strerror(&zipError);
