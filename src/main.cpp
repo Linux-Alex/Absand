@@ -17,6 +17,7 @@
 #include <QQmlApplicationEngine>
 #include <QQmlComponent>
 #include <QQmlContext>
+#include <QLibraryInfo>
 #include <QQuickStyle>
 
 #include "app/AppBackend.h"
@@ -91,6 +92,24 @@ bool loadLanguage(QApplication& app, QTranslator& translator, const QString& loc
     return false;
 }
 
+/// True when a QML module (directory form, e.g. "org/kde/desktop") exists in one
+/// of the import directories Qt uses, including the deployment directory.
+bool qmlModuleAvailable(const QString& modulePath)
+{
+    const QString appDir = QCoreApplication::applicationDirPath();
+    const QStringList roots = QStringList{
+        QLibraryInfo::path(QLibraryInfo::QmlImportsPath),
+        QDir(appDir).filePath(QStringLiteral("qml")),
+        appDir,
+    };
+    for (const QString& root : roots) {
+        if (QFileInfo::exists(QDir(root).filePath(modulePath))) {
+            return true;
+        }
+    }
+    return false;
+}
+
 QStringList fileArguments(const QStringList& arguments)
 {
     QStringList inputPaths;
@@ -127,11 +146,14 @@ int main(int argc, char* argv[])
     QTranslator translator;
     loadLanguage(app, translator, UserConfig::language());
 
-    // Breeze when available (org.kde.desktop comes with qqc2-desktop-style),
-    // Fusion otherwise, so a missing style never prevents the window from
-    // loading.
-    QQuickStyle::setStyle(QStringLiteral("org.kde.desktop"));
+    // Prefer the Breeze style (org.kde.desktop from qqc2-desktop-style), but
+    // only when its QML module is installed: requesting a style that is missing
+    // makes every Qt Quick control fail to load. Fusion is the safe default and
+    // also the fallback style.
     QQuickStyle::setFallbackStyle(QStringLiteral("Fusion"));
+    QQuickStyle::setStyle(qmlModuleAvailable(QStringLiteral("org/kde/desktop"))
+                              ? QStringLiteral("org.kde.desktop")
+                              : QStringLiteral("Fusion"));
 
     AppBackend backend;
     ArchiveBrowser browser;
