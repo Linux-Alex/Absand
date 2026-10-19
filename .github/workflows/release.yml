@@ -235,11 +235,15 @@ jobs:
           test_status=$?
           if [ ${test_status} -ne 0 ]; then
             echo "::warning::Tests failed on Windows (exit ${test_status}); see the log above."
-            echo "--- unresolved dependencies of AbsandTests.exe:"
+            echo "--- executable subsystem:"
+            objdump -p ./build-windows/AbsandTests.exe | grep -i subsystem || true
+            echo "--- unresolved dependencies:"
             ldd ./build-windows/AbsandTests.exe | grep -i "not found" || echo "none"
-            echo "--- direct run (printing the exit status):"
-            QT_QPA_PLATFORM=offscreen ./build-windows/AbsandTests.exe -vs
+            echo "--- direct run with a report file:"
+            QT_QPA_PLATFORM=offscreen ./build-windows/AbsandTests.exe -o "$PWD/test-report.txt,txt" -o -,txt
             echo "direct exit: $?"
+            echo "--- report file:"
+            cat "$PWD/test-report.txt" 2>/dev/null || echo "no report written"
           fi
           set -e
           cmake --install build-windows
