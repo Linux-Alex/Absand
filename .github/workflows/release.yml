@@ -223,19 +223,22 @@ jobs:
           cmake --build build-windows --parallel 4
 
           # Smoke test the real application first: it must load the QML window
-          # and both settings pages.
+          # and all settings pages.
           if [[ "${ABSAND_FRONTEND}" == "kirigami" ]]; then
             QT_QPA_PLATFORM=offscreen ./build-windows/Absand.exe --qml-selftest
           fi
 
-          # Keep collecting test output; a Windows-only test failure must not
-          # hide the diagnostics behind an empty ctest report.
+          # Stage and bundle before the tests, so a test failure cannot leave the
+          # installer without its files.
+          cmake --install build-windows
+          bash packaging/windows/bundle-runtime.sh "$PWD/stage/Absand/bin"
+
+          # The unit tests come last and stay blocking. Console output is
+          # unreliable on this runner, so failures are also written to a file.
           set +e
           ctest --test-dir build-windows --output-on-failure -V
           test_status=$?
           if [ ${test_status} -ne 0 ]; then
-            # Console output is unreliable on this runner, so the failing cases
-            # are written to a report file and printed from there.
             echo "--- executable subsystem:"
             objdump -p ./build-windows/AbsandTests.exe | grep -i subsystem || true
             echo "--- unresolved dependencies:"
@@ -246,9 +249,6 @@ jobs:
           fi
           set -e
           exit ${test_status}
-          cmake --install build-windows
-          bash packaging/windows/bundle-runtime.sh "$PWD/stage/Absand/bin"
-
       - name: Build EXE installer
         shell: pwsh
         run: |
