@@ -105,14 +105,19 @@ ColumnLayout {
                 onModelChanged: currentIndex = Math.max(0, block.field.choices.indexOf(block.currentValue.toString()))
             }
 
-            // Multiline
+            // Multiline. TextArea gained textEdited() only in newer Qt releases,
+            // so textChanged() with an equality guard is used instead.
             QQC.TextArea {
                 Layout.fillWidth: true
                 visible: block.fieldType === "multiline"
                 text: block.currentValue.toString()
                 placeholderText: block.field.placeholder
                 wrapMode: TextArea.Wrap
-                onTextEdited: form.edited(block.field.key, text)
+                onTextChanged: {
+                    if (text !== block.currentValue.toString()) {
+                        form.edited(block.field.key, text);
+                    }
+                }
             }
 
             // Single line (text, password, integer) with an optional browse button

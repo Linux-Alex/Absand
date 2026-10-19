@@ -231,6 +231,38 @@ private slots:
                  QByteArray("unicode payload"));
     }
 
+    void zipWritesThroughMemoryBufferAsAFallback()
+    {
+        QTemporaryDir temp;
+        QVERIFY(temp.isValid());
+        QDir root(temp.path());
+        QVERIFY(root.mkpath("folder/nested"));
+
+        const QString input = writeFile(temp.filePath("folder/nested/data.txt"), "buffered payload");
+        QVERIFY(!input.isEmpty());
+        const QString output = temp.filePath("memory.zip");
+
+        // This is the fallback Windows uses for paths outside the ANSI code
+        // page; force it here so the write-out path is covered on every host.
+        qputenv("ABSAND_ZIP_MEMORY_BUFFER", "1");
+        auto* plugin = manager.archivePluginByName("ZIP Archive");
+        const bool created = plugin->createArchive({ temp.filePath("folder") }, output, {});
+        qunsetenv("ABSAND_ZIP_MEMORY_BUFFER");
+
+        QVERIFY(created);
+        QVERIFY(QFileInfo::exists(output));
+        QCOMPARE(readZipEntry(output, "folder/nested/data.txt"), QByteArray("buffered payload"));
+
+        // Encryption must work through the buffer as well.
+        qputenv("ABSAND_ZIP_MEMORY_BUFFER", "1");
+        const QString secret = temp.filePath("memory-secret.zip");
+        const bool encrypted = plugin->createArchive({ input }, secret, "buffered-pass");
+        qunsetenv("ABSAND_ZIP_MEMORY_BUFFER");
+
+        QVERIFY(encrypted);
+        QCOMPARE(readZipEntry(secret, "data.txt", "buffered-pass"), QByteArray("buffered payload"));
+    }
+
     void zipStoresEmptyDirectories()
     {
         QTemporaryDir temp;

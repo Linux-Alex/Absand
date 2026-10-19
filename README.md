@@ -160,9 +160,16 @@ pacman -S --needed mingw-w64-ucrt-x86_64-qt6-declarative mingw-w64-ucrt-x86_64-k
 ```
 
 The QML files are compiled into the executable, so nothing extra is installed; the runtime
-needs the Kirigami QML module of the platform (the Debian package depends on
-`qml6-module-org-kde-kirigami`, and `packaging/windows/bundle-runtime.sh` copies
-`org/kde` into the deployment directory).
+needs the Kirigami QML module of the platform (the Debian packages depend on
+`qml6-module-org-kde-kirigami` and the Breeze style, and
+`packaging/windows/bundle-runtime.sh` copies `org/kde` into the deployment directory).
+
+Two Linux packages are published, because KF6 Kirigami is not available in every release:
+
+- `Absand-<version>-linux-amd64.deb` - built on Ubuntu 24.04 with the widget interface, so it
+  installs on older distributions (Qt 6.4 and later).
+- `Absand-<version>-linux-amd64-kirigami.deb` - built on Debian 13 with the Kirigami/QML
+  interface; needs Qt 6.8 or newer (Debian 13, Ubuntu 24.10 and later).
 
 For headless smoke testing, `Absand --qml-selftest` instantiates the window and both settings
 pages and exits with a status; the release workflow runs it on Linux and Windows.

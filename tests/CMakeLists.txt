@@ -26,6 +26,12 @@ target_link_libraries(AbsandTests PRIVATE Qt6::Core Qt6::Widgets Qt6::Test bit7z
 target_include_directories(AbsandTests PRIVATE ${LIBZIP_INCLUDE_DIRS} ${TEST_LIBARCHIVE_INCLUDE_DIRS})
 target_compile_options(AbsandTests PRIVATE ${LIBZIP_CFLAGS_OTHER})
 
+# The test runner needs a console: without it Qt's test output would be lost on
+# Windows and ctest would only report "Failed" without any details.
+if(WIN32)
+    set_target_properties(AbsandTests PROPERTIES WIN32_EXECUTABLE FALSE)
+endif()
+
 # PluginManager searches beside the running executable.
 set_target_properties(AbsandTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 add_dependencies(AbsandTests ZipPlugin SevenZipPlugin ClipboardPlugin MatrixPlugin TeamsPlugin TelegramPlugin

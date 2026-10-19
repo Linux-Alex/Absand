@@ -74,17 +74,141 @@ QByteArray readablePath(const QString& path)
     return candidates.first();
 }
 
-zip_t* openArchiveForWriting(const QString& archivePath)
+/**
+ * Opens a source for one input file.
+ *
+ * libzip's own file sources take a narrow path, which cannot express non-ASCII
+ * names on Windows. There the file is opened with the wide-char CRT API and
+ * handed to libzip as a file pointer source instead, which keeps the data
+ * streamed from disk instead of being buffered in memory.
+ */
+zip_source_t* makeInputSource(const QString& path)
 {
-    const QList<QByteArray> candidates = pathCandidates(archivePath);
-    for (const QByteArray& candidate : candidates) {
-        int error = 0;
-        if (zip_t* archive = zip_open(candidate.constData(), ZIP_CREATE | ZIP_TRUNCATE, &error)) {
-            return archive;
+#ifdef Q_OS_WIN
+    if (FILE* handle = ::_wfopen(reinterpret_cast<const wchar_t*>(path.utf16()), L"rb")) {
+        zip_error_t zipError;
+        zip_error_init(&zipError);
+        zip_source_t* source = zip_source_filep_create(handle, 0, kWholeFileLength, &zipError);
+        if (source) {
+            zip_error_fini(&zipError);
+            return source;
         }
-        qWarning() << "Could not create archive with path encoding" << candidate << "error" << error;
+        zip_error_fini(&zipError);
+        std::fclose(handle);
     }
-    return nullptr;
+#endif
+
+    zip_error_t zipError;
+    zip_error_init(&zipError);
+    zip_source_t* source = zip_source_file_create(
+        readablePath(path).constData(), 0, kWholeFileLength, &zipError);
+    if (!source) {
+        qWarning() << "Cannot read" << path << ":" << zip_error_strerror(&zipError);
+    }
+    zip_error_fini(&zipError);
+    return source;
+}
+
+/// Result of opening the destination archive for writing.
+struct ArchiveTarget
+{
+    zip_t* archive = nullptr;
+    zip_source_t* memorySource = nullptr;   ///< set when written through memory
+};
+
+bool wantsMemoryBuffer()
+{
+    // Escape hatch for the Windows path fallback and for the tests: writing
+    // through a memory buffer works for every path because the file itself is
+    // created with QFile afterwards.
+    const QByteArray value = qgetenv("ABSAND_ZIP_MEMORY_BUFFER");
+    return value == "1" || value == "true";
+}
+
+/**
+ * Opens the output archive.
+ *
+ * libzip creates the archive through its narrow-path file source, which cannot
+ * reach names outside the ANSI code page on Windows. When that happens (or when
+ * it is requested explicitly) the archive is built in a memory buffer and
+ * written to the destination with QFile, which uses the wide-char APIs.
+ */
+ArchiveTarget openArchiveForWriting(const QString& archivePath)
+{
+    ArchiveTarget target;
+
+    if (!wantsMemoryBuffer()) {
+        const QList<QByteArray> candidates = pathCandidates(archivePath);
+        for (const QByteArray& candidate : candidates) {
+            int error = 0;
+            if (zip_t* archive = zip_open(candidate.constData(), ZIP_CREATE | ZIP_TRUNCATE, &error)) {
+                target.archive = archive;
+                return target;
+            }
+            qWarning() << "Could not create archive with path encoding" << candidate << "error" << error;
+        }
+        qWarning() << "Falling back to a memory buffer for" << archivePath;
+    }
+
+    zip_error_t zipError;
+    zip_error_init(&zipError);
+    zip_source_t* source = zip_source_buffer_create(nullptr, 0, 0, &zipError);
+    if (!source) {
+        qWarning() << "Cannot allocate an archive buffer:" << zip_error_strerror(&zipError);
+        zip_error_fini(&zipError);
+        return target;
+    }
+    zip_source_keep(source);   // our reference survives the archive
+
+    target.archive = zip_open_from_source(source, ZIP_CREATE | ZIP_TRUNCATE, &zipError);
+    if (!target.archive) {
+        qWarning() << "Cannot create archive in memory:" << zip_error_strerror(&zipError);
+        zip_source_free(source);
+        zip_error_fini(&zipError);
+        return target;
+    }
+
+    zip_error_fini(&zipError);
+    target.memorySource = source;
+    return target;
+}
+
+/// Writes a memory-backed archive to disk with QFile (wide paths on Windows).
+bool writeMemoryArchive(zip_source_t* source, const QString& archivePath)
+{
+    zip_stat_t stats;
+    zip_stat_init(&stats);
+    if (zip_source_stat(source, &stats) != 0 || stats.size == 0) {
+        qWarning() << "Cannot stat the archive buffer";
+        return false;
+    }
+
+    QByteArray buffer;
+    buffer.resize(static_cast<int>(stats.size));
+    if (zip_source_open(source) != 0) {
+        qWarning() << "Cannot open the archive buffer";
+        return false;
+    }
+    const zip_int64_t read = zip_source_read(source, buffer.data(), stats.size);
+    zip_source_close(source);
+    if (read != static_cast<zip_int64_t>(stats.size)) {
+        qWarning() << "Short read from the archive buffer";
+        return false;
+    }
+
+    QFile file(archivePath);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        qWarning() << "Cannot write" << archivePath << ":" << file.errorString();
+        return false;
+    }
+    const qint64 written = file.write(buffer);
+    file.close();
+    if (written != buffer.size()) {
+        qWarning() << "Cannot write the whole archive to" << archivePath;
+        QFile::remove(archivePath);
+        return false;
+    }
+    return true;
 }
 
 void freeProgressState(void* data)
@@ -175,7 +299,8 @@ bool ZipPlugin::createArchive(const QStringList& files,
         return false;
     }
 
-    zip_t* archive = openArchiveForWriting(outputPath);
+    ArchiveTarget target = openArchiveForWriting(outputPath);
+    zip_t* archive = target.archive;
     if (!archive) {
         qWarning() << "Cannot create archive:" << outputPath;
         return false;
@@ -206,18 +331,11 @@ bool ZipPlugin::createArchive(const QStringList& files,
             const QByteArray dirName = name.endsWith('/') ? name : name + '/';
             index = zip_dir_add(archive, dirName.constData(), ZIP_FL_ENC_UTF_8);
         } else {
-            zip_error_t zipError;
-            zip_error_init(&zipError);
-            zip_source_t* source = zip_source_file_create(
-                readablePath(entry.sourcePath).constData(), 0, kWholeFileLength, &zipError);
+            zip_source_t* source = makeInputSource(entry.sourcePath);
             if (!source) {
-                qWarning() << "Cannot read" << entry.sourcePath << ":"
-                           << zip_error_strerror(&zipError);
-                zip_error_fini(&zipError);
                 success = false;
                 break;
             }
-            zip_error_fini(&zipError);
 
             index = zip_file_add(archive, name.constData(), source,
                                  ZIP_FL_ENC_UTF_8 | ZIP_FL_OVERWRITE);
@@ -249,14 +367,29 @@ bool ZipPlugin::createArchive(const QStringList& files,
 
     if (!success) {
         zip_discard(archive);
+        if (target.memorySource) {
+            zip_source_free(target.memorySource);
+        }
         QFile::remove(outputPath);
         return false;
     }
 
     if (zip_close(archive) != 0) {
         qWarning() << "Cannot finish archive:" << outputPath;
+        if (target.memorySource) {
+            zip_source_free(target.memorySource);
+        }
         QFile::remove(outputPath);
         return false;
+    }
+
+    if (target.memorySource) {
+        const bool written = writeMemoryArchive(target.memorySource, outputPath);
+        zip_source_free(target.memorySource);
+        if (!written) {
+            QFile::remove(outputPath);
+            return false;
+        }
     }
 
     if (progressCallback) {
