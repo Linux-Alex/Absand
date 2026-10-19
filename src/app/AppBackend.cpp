@@ -11,6 +11,10 @@
 
 #include <QClipboard>
 #include <QCoreApplication>
+
+#ifndef ABSAND_VERSION
+#define ABSAND_VERSION "0.0.0"
+#endif
 #include <QDateTime>
 #include <QDir>
 #include <QDirIterator>
@@ -433,7 +437,18 @@ void AppBackend::setDestinationFolder(const QString& folder)
         return;
     }
     m_destinationFolder = cleaned;
+
+    // For a local folder destination the save folder is the destination, so the
+    // profile stores it as well and the settings dialog shows the same value.
+    if (DestinationPluginInterface* plugin = currentDestination()) {
+        if (plugin->configKey() == QStringLiteral("local_folder")) {
+            persistRecipient(ConfigKind::Destination, plugin->configKey(),
+                             QStringLiteral("targetFolder"), cleaned);
+        }
+    }
+
     emit outputChanged();
+    emit destinationChanged();
 }
 
 // ------------------------------------------------- destination plugin/profile
@@ -596,6 +611,13 @@ bool AppBackend::destinationHasTarget() const
     if (!plugin) {
         return false;
     }
+
+    // A local folder destination *is* the folder the archive is written to, so
+    // showing a second target field would only ask the same question twice.
+    if (plugin->configKey() == QStringLiteral("local_folder")) {
+        return false;
+    }
+
     const ConfigSchema schema = plugin->configSchema();
     return schemaRecipientField(schema) != nullptr;
 }
@@ -1085,7 +1107,11 @@ bool AppBackend::startArchive()
                                           m_destinationProfile);
         const ConfigSchema schema = destination->configSchema();
         if (const ConfigField* target = schemaRecipientField(schema)) {
-            const QString value = destinationTarget().trimmed();
+            // A local folder destination receives the archive in the folder the
+            // user picked as save location.
+            const QString value = destination->configKey() == QStringLiteral("local_folder")
+                ? QFileInfo(archivePath).absolutePath()
+                : destinationTarget().trimmed();
             if (!value.isEmpty()) {
                 config.insert(target->key, value);
                 persistRecipient(ConfigKind::Destination, destination->configKey(), target->key, value);
@@ -1425,6 +1451,13 @@ void AppBackend::selectProfile(bool sendMode, const QString& key, const QString&
 }
 
 // ------------------------------------------------------------------ language
+
+QString AppBackend::applicationVersion() const
+{
+    // ABSAND_VERSION is a string literal defined by the build.
+    const QString version = QCoreApplication::applicationVersion();
+    return version.isEmpty() ? QString::fromLatin1(ABSAND_VERSION) : version;
+}
 
 QStringList AppBackend::languages() const
 {

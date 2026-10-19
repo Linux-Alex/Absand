@@ -5,6 +5,8 @@
 #include "core/SevenZipRuntime.h"
 
 #include <bit7z/bit7zlibrary.hpp>
+#include <bit7z/biterror.hpp>
+#include <bit7z/bitexception.hpp>
 #include <bit7z/bitarchiveitem.hpp>
 #include <bit7z/bitarchivereader.hpp>
 #include <bit7z/bitarchivewriter.hpp>
@@ -80,6 +82,16 @@ QAbstractItemModel* ArchiveBrowser::entries()
 bool ArchiveBrowser::archiveOpen() const
 {
     return m_reader != nullptr;
+}
+
+bool ArchiveBrowser::archiveEncrypted() const
+{
+    return m_archiveEncrypted;
+}
+
+bool ArchiveBrowser::passwordRequired() const
+{
+    return m_passwordRequired;
 }
 
 QString ArchiveBrowser::archivePath() const
@@ -161,6 +173,9 @@ QString ArchiveBrowser::openArchive(const QString& path, const QString& password
         return m_statusText;
     }
 
+    m_archiveEncrypted = false;
+    m_passwordRequired = false;
+
     try {
         m_reader = std::make_unique<bit7z::BitArchiveReader>(
             *m_library, path.toStdString(), *format, password.toStdString());
@@ -169,10 +184,36 @@ QString ArchiveBrowser::openArchive(const QString& path, const QString& password
         m_password = password;
         m_filterText.clear();
         loadEntries();
+
+        // Archives whose entries are encrypted open without a password, but the
+        // password is needed for extraction, so the browser says so instead of
+        // failing later.
+        m_passwordRequired = m_archiveEncrypted && password.isEmpty();
         m_statusText = tr("%1 — %2 item(s)").arg(info.fileName()).arg(m_entries.size());
+        if (m_archiveEncrypted) {
+            m_statusText += QLatin1String(" · ") + (m_passwordRequired
+                ? tr("encrypted, password needed to extract")
+                : tr("encrypted"));
+        }
         emit filterTextChanged();
         emit stateChanged();
         return QString();
+    } catch (const bit7z::BitException& exception) {
+        m_reader.reset();
+        m_format = nullptr;
+        if (exception.code() == bit7z::BitFailureSource::WrongPassword) {
+            // The headers are encrypted, so the password is needed before the
+            // contents can even be listed.
+            m_passwordRequired = true;
+            m_statusText = password.isEmpty()
+                ? tr("This archive is encrypted. Enter its password to browse it.")
+                : tr("The password does not open this archive.");
+            emit stateChanged();
+            return m_statusText;
+        }
+        m_statusText = tr("The archive could not be opened: %1").arg(exception.what());
+        emit stateChanged();
+        return m_statusText;
     } catch (const std::exception& exception) {
         m_reader.reset();
         m_format = nullptr;
@@ -209,6 +250,10 @@ void ArchiveBrowser::loadEntries()
                 item.lastWriteTime().time_since_epoch()).count()));
         entry.archiveIndex = static_cast<int>(index);
         m_entries.append(entry);
+
+        if (!m_archiveEncrypted && item.isEncrypted()) {
+            m_archiveEncrypted = true;
+        }
     }
 
     // Only directory entries coming from the archive are used for parents.
@@ -286,6 +331,8 @@ void ArchiveBrowser::closeArchive()
     m_model->setEntries({});
     m_matchingCount = 0;
     m_statusText.clear();
+    m_archiveEncrypted = false;
+    m_passwordRequired = false;
     emit filterTextChanged();
     emit stateChanged();
 }
@@ -341,6 +388,16 @@ QString ArchiveBrowser::extractPaths(const QStringList& archivePaths, const QStr
 
     try {
         m_reader->extractTo(destinationFolder.toStdString(), indices);
+    } catch (const bit7z::BitException& exception) {
+        if (exception.code() == bit7z::BitFailureSource::WrongPassword) {
+            m_passwordRequired = true;
+            m_archiveEncrypted = true;
+            emit stateChanged();
+            return m_password.isEmpty()
+                ? tr("This archive is encrypted. Enter the password in the archive browser and try again.")
+                : tr("The password does not open this archive.");
+        }
+        return tr("Extraction failed: %1").arg(exception.what());
     } catch (const std::exception& exception) {
         return tr("Extraction failed: %1").arg(exception.what());
     }

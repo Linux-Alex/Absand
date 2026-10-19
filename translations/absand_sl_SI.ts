@@ -5,166 +5,166 @@
 <context>
     <name>AppBackend</name>
     <message>
-        <location filename="../src/app/AppBackend.cpp" line="199"/>
+        <location filename="../src/app/AppBackend.cpp" line="203"/>
         <source>No files selected. Add files or folders to archive.</source>
         <translation>Izbrana ni nobena datoteka. Dodajte datoteke ali mape za arhiviranje.</translation>
     </message>
     <message>
-        <location filename="../src/app/AppBackend.cpp" line="202"/>
+        <location filename="../src/app/AppBackend.cpp" line="206"/>
         <source>Selected: %1</source>
         <translation>Izbrano: %1</translation>
     </message>
     <message>
-        <location filename="../src/app/AppBackend.cpp" line="204"/>
+        <location filename="../src/app/AppBackend.cpp" line="208"/>
         <source>Selected: %1 items</source>
         <translation>Izbranih elementov: %1</translation>
     </message>
     <message>
-        <location filename="../src/app/AppBackend.cpp" line="213"/>
+        <location filename="../src/app/AppBackend.cpp" line="217"/>
         <source>Total size: %1</source>
         <translation>Skupna velikost: %1</translation>
     </message>
     <message>
-        <location filename="../src/app/AppBackend.cpp" line="376"/>
+        <location filename="../src/app/AppBackend.cpp" line="380"/>
         <source>Password copied to clipboard.</source>
         <translation>Geslo je kopirano v odložišče.</translation>
     </message>
     <message>
-        <location filename="../src/app/AppBackend.cpp" line="385"/>
+        <location filename="../src/app/AppBackend.cpp" line="389"/>
         <source>Download link copied to clipboard.</source>
         <translation>Povezava za prenos je kopirana v odložišče.</translation>
     </message>
     <message>
-        <location filename="../src/app/AppBackend.cpp" line="676"/>
-        <location filename="../src/app/AppBackend.cpp" line="719"/>
+        <location filename="../src/app/AppBackend.cpp" line="698"/>
+        <location filename="../src/app/AppBackend.cpp" line="741"/>
         <source>Do not send</source>
         <translation>Ne pošlji</translation>
     </message>
     <message>
-        <location filename="../src/app/AppBackend.cpp" line="975"/>
+        <location filename="../src/app/AppBackend.cpp" line="997"/>
         <source>Size: %1</source>
         <translation>Velikost: %1</translation>
     </message>
     <message>
-        <location filename="../src/app/AppBackend.cpp" line="979"/>
+        <location filename="../src/app/AppBackend.cpp" line="1001"/>
         <source>The archive could not be created.</source>
         <translation>Arhiva ni bilo mogoče ustvariti.</translation>
     </message>
     <message>
-        <location filename="../src/app/AppBackend.cpp" line="984"/>
+        <location filename="../src/app/AppBackend.cpp" line="1006"/>
         <source>Transferred with the %1 destination.</source>
         <translation>Preneseno s ciljem %1.</translation>
     </message>
     <message>
-        <location filename="../src/app/AppBackend.cpp" line="986"/>
+        <location filename="../src/app/AppBackend.cpp" line="1008"/>
         <source>Transfer failed — %1</source>
         <translation>Prenos ni uspel — %1</translation>
     </message>
     <message>
-        <location filename="../src/app/AppBackend.cpp" line="990"/>
+        <location filename="../src/app/AppBackend.cpp" line="1012"/>
         <source>Download link: %1</source>
         <translation>Povezava za prenos: %1</translation>
     </message>
     <message>
-        <location filename="../src/app/AppBackend.cpp" line="997"/>
+        <location filename="../src/app/AppBackend.cpp" line="1019"/>
         <source>Password delivered via %1.</source>
         <translation>Geslo je bilo dostavljeno prek %1.</translation>
     </message>
     <message>
-        <location filename="../src/app/AppBackend.cpp" line="1000"/>
+        <location filename="../src/app/AppBackend.cpp" line="1022"/>
         <source>The password was not sent because the transfer failed.</source>
         <translation>Geslo ni bilo poslano, ker prenos ni uspel.</translation>
     </message>
     <message>
-        <location filename="../src/app/AppBackend.cpp" line="1002"/>
+        <location filename="../src/app/AppBackend.cpp" line="1024"/>
         <source>Password delivery failed — %1</source>
         <translation>Dostava gesla ni uspela — %1</translation>
     </message>
     <message>
-        <location filename="../src/app/AppBackend.cpp" line="1008"/>
+        <location filename="../src/app/AppBackend.cpp" line="1030"/>
         <source>Archive created</source>
         <translation>Arhiv je ustvarjen</translation>
     </message>
     <message>
-        <location filename="../src/app/AppBackend.cpp" line="1008"/>
+        <location filename="../src/app/AppBackend.cpp" line="1030"/>
         <source>Archive created with problems</source>
         <translation>Arhiv je ustvarjen z opozorili</translation>
     </message>
     <message>
-        <location filename="../src/app/AppBackend.cpp" line="1025"/>
+        <location filename="../src/app/AppBackend.cpp" line="1047"/>
         <source>Select at least one file or folder first.</source>
         <translation>Najprej izberite vsaj eno datoteko ali mapo.</translation>
     </message>
     <message>
-        <location filename="../src/app/AppBackend.cpp" line="1031"/>
+        <location filename="../src/app/AppBackend.cpp" line="1053"/>
         <source>No archive plugin is available.</source>
         <translation>Na voljo ni nobenega vtičnika za arhive.</translation>
     </message>
     <message>
-        <location filename="../src/app/AppBackend.cpp" line="1037"/>
+        <location filename="../src/app/AppBackend.cpp" line="1059"/>
         <source>Please set a password for encryption.</source>
         <translation>Nastavite geslo za šifriranje.</translation>
     </message>
     <message>
-        <location filename="../src/app/AppBackend.cpp" line="1046"/>
+        <location filename="../src/app/AppBackend.cpp" line="1068"/>
         <source>The folder %1 could not be created.</source>
         <translation>Mape %1 ni bilo mogoče ustvariti.</translation>
     </message>
     <message>
-        <location filename="../src/app/AppBackend.cpp" line="1058"/>
+        <location filename="../src/app/AppBackend.cpp" line="1080"/>
         <source>Creating the archive...</source>
         <translation>Ustvarjanje arhiva ...</translation>
     </message>
     <message>
-        <location filename="../src/app/AppBackend.cpp" line="1070"/>
+        <location filename="../src/app/AppBackend.cpp" line="1092"/>
         <source>The archive could not be created. Check that the folder is writable and that the input files still exist.</source>
         <translation>Arhiva ni bilo mogoče ustvariti. Preverite, ali je v mapo mogoče pisati in ali vhodne datoteke še obstajajo.</translation>
     </message>
     <message>
-        <location filename="../src/app/AppBackend.cpp" line="1081"/>
+        <location filename="../src/app/AppBackend.cpp" line="1103"/>
         <source>Transferring with the %1 destination...</source>
         <translation>Prenos s ciljem %1 ...</translation>
     </message>
     <message>
-        <location filename="../src/app/AppBackend.cpp" line="1098"/>
-        <location filename="../src/app/AppBackend.cpp" line="1145"/>
+        <location filename="../src/app/AppBackend.cpp" line="1124"/>
+        <location filename="../src/app/AppBackend.cpp" line="1171"/>
         <source>%1 is not configured: %2</source>
         <translation>%1 ni nastavljen: %2</translation>
     </message>
     <message>
-        <location filename="../src/app/AppBackend.cpp" line="1110"/>
+        <location filename="../src/app/AppBackend.cpp" line="1136"/>
         <source>%1: the transfer step failed.</source>
         <translation>%1: prenos ni uspel.</translation>
     </message>
     <message>
-        <location filename="../src/app/AppBackend.cpp" line="1126"/>
+        <location filename="../src/app/AppBackend.cpp" line="1152"/>
         <source>The transfer failed.</source>
         <translation>Prenos ni uspel.</translation>
     </message>
     <message>
-        <location filename="../src/app/AppBackend.cpp" line="1128"/>
+        <location filename="../src/app/AppBackend.cpp" line="1154"/>
         <source>Delivering the password with %1...</source>
         <translation>Dostavljanje gesla prek %1 ...</translation>
     </message>
     <message>
-        <location filename="../src/app/AppBackend.cpp" line="1156"/>
+        <location filename="../src/app/AppBackend.cpp" line="1182"/>
         <source>%1: the password could not be delivered.</source>
         <translation>%1: gesla ni bilo mogoče dostaviti.</translation>
     </message>
     <message>
-        <location filename="../src/app/AppBackend.cpp" line="1314"/>
-        <location filename="../src/app/AppBackend.cpp" line="1367"/>
+        <location filename="../src/app/AppBackend.cpp" line="1340"/>
+        <location filename="../src/app/AppBackend.cpp" line="1393"/>
         <source>Please enter a profile name.</source>
         <translation>Vnesite ime profila.</translation>
     </message>
     <message>
-        <location filename="../src/app/AppBackend.cpp" line="1317"/>
-        <location filename="../src/app/AppBackend.cpp" line="1373"/>
+        <location filename="../src/app/AppBackend.cpp" line="1343"/>
+        <location filename="../src/app/AppBackend.cpp" line="1399"/>
         <source>A profile named &quot;%1&quot; already exists.</source>
         <translation>Profil z imenom »%1« že obstaja.</translation>
     </message>
     <message>
-        <location filename="../src/app/AppBackend.cpp" line="1394"/>
+        <location filename="../src/app/AppBackend.cpp" line="1420"/>
         <source>At least one profile has to stay.</source>
         <translation>Ohraniti je treba vsaj en profil.</translation>
     </message>
@@ -172,90 +172,118 @@
 <context>
     <name>ArchiveBrowser</name>
     <message>
-        <location filename="../src/app/ArchiveBrowser.cpp" line="128"/>
+        <location filename="../src/app/ArchiveBrowser.cpp" line="140"/>
         <source>Could not find the bundled 7-Zip runtime. Put it next to the app or set ABSAND_7ZIP_LIBRARY.</source>
         <translation>Vgrajenega izvajalnega okolja 7-Zip ni bilo mogoče najti. Postavite ga ob aplikacijo ali nastavite ABSAND_7ZIP_LIBRARY.</translation>
     </message>
     <message>
-        <location filename="../src/app/ArchiveBrowser.cpp" line="136"/>
+        <location filename="../src/app/ArchiveBrowser.cpp" line="148"/>
         <source>The 7-Zip library could not be loaded: %1</source>
         <translation>Knjižnice 7-Zip ni bilo mogoče naložiti: %1</translation>
     </message>
     <message>
-        <location filename="../src/app/ArchiveBrowser.cpp" line="147"/>
+        <location filename="../src/app/ArchiveBrowser.cpp" line="159"/>
         <source>The archive %1 does not exist.</source>
         <translation>Arhiv %1 ne obstaja.</translation>
     </message>
     <message>
-        <location filename="../src/app/ArchiveBrowser.cpp" line="154"/>
+        <location filename="../src/app/ArchiveBrowser.cpp" line="166"/>
         <source>Unsupported archive type. Open a .zip or .7z archive.</source>
         <translation>Nepodprta vrsta arhiva. Odprite arhiv .zip ali .7z.</translation>
     </message>
     <message>
-        <location filename="../src/app/ArchiveBrowser.cpp" line="172"/>
+        <location filename="../src/app/ArchiveBrowser.cpp" line="192"/>
         <source>%1 — %2 item(s)</source>
         <translation>%1 — elementov: %2</translation>
     </message>
     <message>
-        <location filename="../src/app/ArchiveBrowser.cpp" line="179"/>
+        <location filename="../src/app/ArchiveBrowser.cpp" line="195"/>
+        <source>encrypted, password needed to extract</source>
+        <translation>šifrirano, za razširjanje je potrebno geslo</translation>
+    </message>
+    <message>
+        <location filename="../src/app/ArchiveBrowser.cpp" line="196"/>
+        <source>encrypted</source>
+        <translation>šifrirano</translation>
+    </message>
+    <message>
+        <location filename="../src/app/ArchiveBrowser.cpp" line="209"/>
+        <source>This archive is encrypted. Enter its password to browse it.</source>
+        <translation>Ta arhiv je šifriran. Za pregled vnesite njegovo geslo.</translation>
+    </message>
+    <message>
+        <location filename="../src/app/ArchiveBrowser.cpp" line="210"/>
+        <location filename="../src/app/ArchiveBrowser.cpp" line="398"/>
+        <source>The password does not open this archive.</source>
+        <translation>To geslo ne odpre arhiva.</translation>
+    </message>
+    <message>
+        <location filename="../src/app/ArchiveBrowser.cpp" line="214"/>
+        <location filename="../src/app/ArchiveBrowser.cpp" line="220"/>
         <source>The archive could not be opened: %1</source>
         <translation>Arhiva ni bilo mogoče odpreti: %1</translation>
     </message>
     <message>
-        <location filename="../src/app/ArchiveBrowser.cpp" line="229"/>
-        <location filename="../src/app/ArchiveBrowser.cpp" line="264"/>
+        <location filename="../src/app/ArchiveBrowser.cpp" line="274"/>
+        <location filename="../src/app/ArchiveBrowser.cpp" line="309"/>
         <source>Folder</source>
         <translation>Mapa</translation>
     </message>
     <message>
-        <location filename="../src/app/ArchiveBrowser.cpp" line="232"/>
-        <location filename="../src/app/ArchiveBrowser.cpp" line="264"/>
+        <location filename="../src/app/ArchiveBrowser.cpp" line="277"/>
+        <location filename="../src/app/ArchiveBrowser.cpp" line="309"/>
         <source>File</source>
         <translation>Datoteka</translation>
     </message>
     <message>
-        <location filename="../src/app/ArchiveBrowser.cpp" line="296"/>
+        <location filename="../src/app/ArchiveBrowser.cpp" line="343"/>
         <source>No archive is open.</source>
         <translation>Noben arhiv ni odprt.</translation>
     </message>
     <message>
-        <location filename="../src/app/ArchiveBrowser.cpp" line="322"/>
-        <location filename="../src/app/ArchiveBrowser.cpp" line="364"/>
+        <location filename="../src/app/ArchiveBrowser.cpp" line="369"/>
+        <location filename="../src/app/ArchiveBrowser.cpp" line="421"/>
         <source>Open an archive first.</source>
         <translation>Najprej odprite arhiv.</translation>
     </message>
     <message>
-        <location filename="../src/app/ArchiveBrowser.cpp" line="325"/>
+        <location filename="../src/app/ArchiveBrowser.cpp" line="372"/>
         <source>Select one or more items first.</source>
         <translation>Najprej izberite enega ali več elementov.</translation>
     </message>
     <message>
-        <location filename="../src/app/ArchiveBrowser.cpp" line="330"/>
+        <location filename="../src/app/ArchiveBrowser.cpp" line="377"/>
         <source>Nothing to extract.</source>
         <translation>Ni ničesar za razširiti.</translation>
     </message>
     <message>
-        <location filename="../src/app/ArchiveBrowser.cpp" line="339"/>
+        <location filename="../src/app/ArchiveBrowser.cpp" line="386"/>
         <source>The folder %1 could not be created.</source>
         <translation>Mape %1 ni bilo mogoče ustvariti.</translation>
     </message>
     <message>
-        <location filename="../src/app/ArchiveBrowser.cpp" line="345"/>
+        <location filename="../src/app/ArchiveBrowser.cpp" line="397"/>
+        <source>This archive is encrypted. Enter the password in the archive browser and try again.</source>
+        <translation>Ta arhiv je šifriran. Vnesite geslo v brskalniku arhivov in poskusite znova.</translation>
+    </message>
+    <message>
+        <location filename="../src/app/ArchiveBrowser.cpp" line="400"/>
+        <location filename="../src/app/ArchiveBrowser.cpp" line="402"/>
         <source>Extraction failed: %1</source>
         <translation>Razširjanje ni uspelo: %1</translation>
     </message>
     <message>
-        <location filename="../src/app/ArchiveBrowser.cpp" line="348"/>
+        <location filename="../src/app/ArchiveBrowser.cpp" line="405"/>
         <source>Extracted %1 item(s) to %2.</source>
         <translation>Razširjenih elementov: %1 v %2.</translation>
     </message>
     <message>
-        <location filename="../src/app/ArchiveBrowser.cpp" line="357"/>
+        <location filename="../src/app/ArchiveBrowser.cpp" line="414"/>
         <source>Copied %1 archive path(s) to the clipboard.</source>
         <translation>Kopiranih poti iz arhiva: %1 v odložišče.</translation>
     </message>
     <message>
-        <location filename="../src/app/ArchiveBrowser.cpp" line="381"/>
+        <location filename="../src/app/ArchiveBrowser.cpp" line="438"/>
         <source>Adding files failed: %1</source>
         <translation>Dodajanje datotek ni uspelo: %1</translation>
     </message>
@@ -551,82 +579,103 @@
         <translation>Brskalnik arhivov</translation>
     </message>
     <message>
-        <location filename="../src/qml/ArchiveBrowserPage.qml" line="39"/>
+        <location filename="../src/qml/ArchiveBrowserPage.qml" line="79"/>
         <source>Open archive</source>
         <translation>Odpri arhiv</translation>
     </message>
     <message>
-        <location filename="../src/qml/ArchiveBrowserPage.qml" line="40"/>
+        <location filename="../src/qml/ArchiveBrowserPage.qml" line="80"/>
         <source>Archives (*.7z *.zip)</source>
         <translation>Arhivi (*.7z *.zip)</translation>
     </message>
     <message>
-        <location filename="../src/qml/ArchiveBrowserPage.qml" line="40"/>
+        <location filename="../src/qml/ArchiveBrowserPage.qml" line="80"/>
         <source>All files (*)</source>
         <translation>Vse datoteke (*)</translation>
     </message>
     <message>
-        <location filename="../src/qml/ArchiveBrowserPage.qml" line="46"/>
+        <location filename="../src/qml/ArchiveBrowserPage.qml" line="86"/>
         <source>Select files to add</source>
         <translation>Izberite datoteke za dodajanje</translation>
     </message>
     <message>
-        <location filename="../src/qml/ArchiveBrowserPage.qml" line="57"/>
+        <location filename="../src/qml/ArchiveBrowserPage.qml" line="96"/>
         <source>Choose the extraction folder</source>
         <translation>Izberite mapo za razširjanje</translation>
     </message>
     <message>
-        <location filename="../src/qml/ArchiveBrowserPage.qml" line="67"/>
+        <location filename="../src/qml/ArchiveBrowserPage.qml" line="106"/>
         <source>Archive password</source>
         <translation>Geslo arhiva</translation>
     </message>
     <message>
-        <location filename="../src/qml/ArchiveBrowserPage.qml" line="85"/>
-        <source>Enter the password if the archive is encrypted.</source>
-        <translation>Vnesite geslo, če je arhiv šifriran.</translation>
+        <location filename="../src/qml/ArchiveBrowserPage.qml" line="120"/>
+        <source>This archive is encrypted. Enter its password.</source>
+        <translation>Ta arhiv je šifriran. Vnesite njegovo geslo.</translation>
     </message>
     <message>
-        <location filename="../src/qml/ArchiveBrowserPage.qml" line="91"/>
+        <location filename="../src/qml/ArchiveBrowserPage.qml" line="144"/>
+        <source>Open</source>
+        <translation>Odpri</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/ArchiveBrowserPage.qml" line="146"/>
+        <source>Open an archive</source>
+        <translation>Odpri arhiv</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/ArchiveBrowserPage.qml" line="152"/>
+        <source>Add files</source>
+        <translation>Dodaj datoteke</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/ArchiveBrowserPage.qml" line="159"/>
+        <source>Extract</source>
+        <translation>Razširi</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/ArchiveBrowserPage.qml" line="126"/>
         <source>Password</source>
         <translation>Geslo</translation>
     </message>
     <message>
-        <location filename="../src/qml/ArchiveBrowserPage.qml" line="98"/>
-        <source>Add files...</source>
-        <translation>Dodaj datoteke ...</translation>
-    </message>
-    <message>
-        <location filename="../src/qml/ArchiveBrowserPage.qml" line="104"/>
-        <source>Extract selected</source>
-        <translation>Razširi izbrano</translation>
-    </message>
-    <message>
-        <location filename="../src/qml/ArchiveBrowserPage.qml" line="110"/>
+        <location filename="../src/qml/ArchiveBrowserPage.qml" line="166"/>
         <source>Copy paths</source>
         <translation>Kopiraj poti</translation>
     </message>
     <message>
-        <location filename="../src/qml/ArchiveBrowserPage.qml" line="116"/>
+        <location filename="../src/qml/ArchiveBrowserPage.qml" line="173"/>
+        <location filename="../src/qml/ArchiveBrowserPage.qml" line="223"/>
+        <source>Set password</source>
+        <translation>Nastavi geslo</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/ArchiveBrowserPage.qml" line="183"/>
         <source>Refresh</source>
         <translation>Osveži</translation>
     </message>
     <message>
-        <location filename="../src/qml/ArchiveBrowserPage.qml" line="133"/>
-        <source>Open archive...</source>
-        <translation>Odpri arhiv ...</translation>
-    </message>
-    <message>
-        <location filename="../src/qml/ArchiveBrowserPage.qml" line="141"/>
+        <location filename="../src/qml/ArchiveBrowserPage.qml" line="203"/>
         <source>Open an archive to browse its contents</source>
         <translation>Odprite arhiv za pregled vsebine</translation>
     </message>
     <message>
-        <location filename="../src/qml/ArchiveBrowserPage.qml" line="145"/>
+        <location filename="../src/qml/ArchiveBrowserPage.qml" line="207"/>
         <source>Filter</source>
         <translation>Filtriraj</translation>
     </message>
     <message>
-        <location filename="../src/qml/ArchiveBrowserPage.qml" line="213"/>
+        <location filename="../src/qml/ArchiveBrowserPage.qml" line="219"/>
+        <source>This archive is encrypted. Set its password to extract files.</source>
+        <translation>Ta arhiv je šifriran. Nastavite geslo za razširjanje datotek.</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/ArchiveBrowserPage.qml" line="220"/>
+        <source>This archive is encrypted.</source>
+        <translation>Ta arhiv je šifriran.</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/ArchiveBrowserPage.qml" line="285"/>
         <source>No matching entries.</source>
         <translation>Ni ujemajočih se elementov.</translation>
     </message>
@@ -1149,57 +1198,61 @@
 <context>
     <name>Main</name>
     <message>
-        <location filename="../src/qml/Main.qml" line="11"/>
         <location filename="../src/qml/Main.qml" line="21"/>
         <source>Absand</source>
         <translation>Absand</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="27"/>
-        <location filename="../src/qml/Main.qml" line="419"/>
+        <location filename="../src/qml/Main.qml" line="35"/>
+        <location filename="../src/qml/Main.qml" line="425"/>
         <source>Create archive</source>
         <translation>Ustvari arhiv</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="32"/>
-        <location filename="../src/qml/Main.qml" line="94"/>
+        <location filename="../src/qml/Main.qml" line="40"/>
         <source>Archive browser</source>
         <translation>Brskalnik arhivov</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="37"/>
+        <location filename="../src/qml/Main.qml" line="45"/>
         <source>Destination settings</source>
         <translation>Nastavitve cilja</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="42"/>
+        <location filename="../src/qml/Main.qml" line="50"/>
         <source>Password delivery settings</source>
         <translation>Nastavitve dostave gesla</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="47"/>
+        <location filename="../src/qml/Main.qml" line="55"/>
         <source>Language</source>
         <translation>Jezik</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="71"/>
+        <location filename="../src/qml/Main.qml" line="79"/>
         <source>Select files to archive</source>
         <translation>Izberite datoteke za arhiviranje</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="78"/>
+        <location filename="../src/qml/Main.qml" line="86"/>
         <source>Select a folder to archive</source>
         <translation>Izberite mapo za arhiviranje</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="84"/>
+        <location filename="../src/qml/Main.qml" line="92"/>
         <source>Select the folder for the archive</source>
         <translation>Izberite mapo za arhiv</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="90"/>
-        <source>Absand - Secure Archive Sender</source>
-        <translation>Absand - varno pošiljanje arhivov</translation>
+        <location filename="../src/qml/Main.qml" line="11"/>
+        <location filename="../src/qml/Main.qml" line="98"/>
+        <source>Absand %1</source>
+        <translation>Absand %1</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/Main.qml" line="26"/>
+        <source>Version %1</source>
+        <translation>Različica %1</translation>
     </message>
     <message>
         <location filename="../src/qml/Main.qml" line="111"/>
@@ -1212,134 +1265,134 @@
         <translation>Sem spustite datoteke ali mape</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="164"/>
+        <location filename="../src/qml/Main.qml" line="167"/>
         <source>Add files...</source>
         <translation>Dodaj datoteke ...</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="169"/>
+        <location filename="../src/qml/Main.qml" line="173"/>
         <source>Add folder...</source>
         <translation>Dodaj mapo ...</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="174"/>
+        <location filename="../src/qml/Main.qml" line="179"/>
         <source>Remove</source>
         <translation>Odstrani</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="183"/>
+        <location filename="../src/qml/Main.qml" line="189"/>
         <source>Clear all</source>
         <translation>Počisti vse</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="201"/>
+        <location filename="../src/qml/Main.qml" line="207"/>
         <source>Archive settings</source>
         <translation>Nastavitve arhiva</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="204"/>
+        <location filename="../src/qml/Main.qml" line="210"/>
         <source>Format</source>
         <translation>Oblika</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="214"/>
+        <location filename="../src/qml/Main.qml" line="220"/>
         <source>Encrypt the archive</source>
         <translation>Šifriraj arhiv</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="235"/>
+        <location filename="../src/qml/Main.qml" line="241"/>
         <source>Archive password</source>
         <translation>Geslo arhiva</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="240"/>
+        <location filename="../src/qml/Main.qml" line="246"/>
         <source>Show</source>
         <translation>Pokaži</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="243"/>
+        <location filename="../src/qml/Main.qml" line="249"/>
         <source>Generate</source>
         <translation>Ustvari</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="248"/>
+        <location filename="../src/qml/Main.qml" line="254"/>
         <source>Copy</source>
         <translation>Kopiraj</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="257"/>
+        <location filename="../src/qml/Main.qml" line="263"/>
         <source>This format does not support encryption.</source>
         <translation>Ta oblika ne podpira šifriranja.</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="272"/>
+        <location filename="../src/qml/Main.qml" line="278"/>
         <source>Destination</source>
         <translation>Cilj</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="277"/>
+        <location filename="../src/qml/Main.qml" line="283"/>
         <source>Plugin</source>
         <translation>Vtičnik</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="285"/>
-        <location filename="../src/qml/Main.qml" line="370"/>
+        <location filename="../src/qml/Main.qml" line="291"/>
+        <location filename="../src/qml/Main.qml" line="376"/>
         <source>Profile</source>
         <translation>Profil</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="293"/>
-        <location filename="../src/qml/Main.qml" line="360"/>
+        <location filename="../src/qml/Main.qml" line="299"/>
+        <location filename="../src/qml/Main.qml" line="366"/>
         <source>Configure...</source>
         <translation>Nastavi ...</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="313"/>
+        <location filename="../src/qml/Main.qml" line="319"/>
         <source>Save to</source>
         <translation>Shrani v</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="320"/>
+        <location filename="../src/qml/Main.qml" line="326"/>
         <source>Browse...</source>
         <translation>Prebrskaj ...</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="328"/>
+        <location filename="../src/qml/Main.qml" line="334"/>
         <source>File name</source>
         <translation>Ime datoteke</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="346"/>
+        <location filename="../src/qml/Main.qml" line="352"/>
         <source>Password delivery</source>
         <translation>Dostava gesla</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="351"/>
+        <location filename="../src/qml/Main.qml" line="357"/>
         <source>Send password via</source>
         <translation>Pošlji geslo prek</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="395"/>
+        <location filename="../src/qml/Main.qml" line="401"/>
         <source>The message template may contain {password} and {link}.</source>
         <translation>Predloga sporočila lahko vsebuje {password} in {link}.</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="419"/>
+        <location filename="../src/qml/Main.qml" line="425"/>
         <source>Creating archive...</source>
         <translation>Ustvarjanje arhiva ...</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="471"/>
+        <location filename="../src/qml/Main.qml" line="477"/>
         <source>Copy password</source>
         <translation>Kopiraj geslo</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="477"/>
+        <location filename="../src/qml/Main.qml" line="483"/>
         <source>Copy link</source>
         <translation>Kopiraj povezavo</translation>
     </message>
     <message>
-        <location filename="../src/qml/Main.qml" line="484"/>
+        <location filename="../src/qml/Main.qml" line="490"/>
         <source>Close</source>
         <translation>Zapri</translation>
     </message>
@@ -1504,8 +1557,8 @@
     <message>
         <location filename="../src/ui/MainDialog.cpp" line="123"/>
         <location filename="../src/ui/MainDialog.cpp" line="277"/>
-        <source>Absand - Secure Archive Sender</source>
-        <translation>Absand – varno pošiljanje arhivov</translation>
+        <source>Absand %1 - Secure Archive Sender</source>
+        <translation>Absand %1 - varno pošiljanje arhivov</translation>
     </message>
     <message>
         <location filename="../src/ui/MainDialog.cpp" line="249"/>
@@ -1517,7 +1570,7 @@
     </message>
     <message>
         <location filename="../src/ui/MainDialog.cpp" line="252"/>
-        <location filename="../src/ui/MainDialog.cpp" line="1073"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1076"/>
         <source>Recipient:</source>
         <translation>Prejemnik:</translation>
     </message>
@@ -1534,7 +1587,7 @@
     </message>
     <message>
         <location filename="../src/ui/MainDialog.cpp" line="320"/>
-        <location filename="../src/ui/MainDialog.cpp" line="773"/>
+        <location filename="../src/ui/MainDialog.cpp" line="776"/>
         <source>Target:</source>
         <translation>Cilj:</translation>
     </message>
@@ -1545,19 +1598,19 @@
     </message>
     <message>
         <location filename="../src/ui/MainDialog.cpp" line="466"/>
-        <location filename="../src/ui/MainDialog.cpp" line="1218"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1221"/>
         <source>%1 B</source>
         <translation>%1 B</translation>
     </message>
     <message>
         <location filename="../src/ui/MainDialog.cpp" line="468"/>
-        <location filename="../src/ui/MainDialog.cpp" line="1220"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1223"/>
         <source>%1 KB</source>
         <translation>%1 KB</translation>
     </message>
     <message>
         <location filename="../src/ui/MainDialog.cpp" line="470"/>
-        <location filename="../src/ui/MainDialog.cpp" line="1222"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1225"/>
         <source>%1 MB</source>
         <translation>%1 MB</translation>
     </message>
@@ -1602,70 +1655,70 @@
         <translation>Izberite ciljno mapo</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="806"/>
+        <location filename="../src/ui/MainDialog.cpp" line="809"/>
         <source>Destination plugin: %1</source>
         <translation>Ciljni vtičnik: %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="842"/>
+        <location filename="../src/ui/MainDialog.cpp" line="845"/>
         <source>This format does not support encryption</source>
         <translation>Ta oblika ne podpira šifriranja</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="882"/>
-        <location filename="../src/ui/MainDialog.cpp" line="1280"/>
+        <location filename="../src/ui/MainDialog.cpp" line="885"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1283"/>
         <source>Password copied to clipboard!</source>
         <translation>Geslo je kopirano v odložišče!</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="901"/>
-        <location filename="../src/ui/MainDialog.cpp" line="1129"/>
+        <location filename="../src/ui/MainDialog.cpp" line="904"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1132"/>
         <source>No archive plugin is available.</source>
         <translation>Na voljo ni nobenega vtičnika za arhive.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="909"/>
+        <location filename="../src/ui/MainDialog.cpp" line="912"/>
         <source>Creating the archive...</source>
         <translation>Ustvarjanje arhiva ...</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="910"/>
+        <location filename="../src/ui/MainDialog.cpp" line="913"/>
         <source>Creating Archive</source>
         <translation>Ustvarjanje arhiva</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="943"/>
-        <location filename="../src/ui/MainDialog.cpp" line="1099"/>
+        <location filename="../src/ui/MainDialog.cpp" line="946"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1102"/>
         <source>%1 is not configured: %2</source>
         <translation>%1 ni nastavljen: %2</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="964"/>
+        <location filename="../src/ui/MainDialog.cpp" line="967"/>
         <source>%1: the transfer step failed.</source>
         <translation>%1: prenos ni uspel.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="1108"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1111"/>
         <source>%1: the password could not be delivered.</source>
         <translation>%1: gesla ni bilo mogoče dostaviti.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="1117"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1120"/>
         <source>Select at least one file or folder first.</source>
         <translation>Najprej izberite vsaj eno datoteko ali mapo.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="1123"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1126"/>
         <source>Please choose where the archive should be created.</source>
         <translation>Izberite, kje naj se arhiv ustvari.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="1137"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1140"/>
         <source>Encryption Not Supported</source>
         <translation>Šifriranje ni podprto</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="1138"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1141"/>
         <source>%1 does not support encryption.
 
 The archive will be created WITHOUT encryption.
@@ -1678,17 +1731,17 @@ Arhiv bo ustvarjen BREZ šifriranja.
 Za šifrirane arhive uporabite obliko ZIP ali 7z.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="1146"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1149"/>
         <source>Please set a password for encryption.</source>
         <translation>Nastavite geslo za šifriranje.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="1152"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1155"/>
         <source>Confirm Encryption</source>
         <translation>Potrditev šifriranja</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="1154"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1157"/>
         <source>Encrypt the archive with %1?
 
 Password: %2</source>
@@ -1697,17 +1750,17 @@ Password: %2</source>
 Geslo: %2</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="1169"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1172"/>
         <source>The folder %1 does not exist and could not be created.</source>
         <translation>Mapa %1 ne obstaja in je ni bilo mogoče ustvariti.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="1179"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1182"/>
         <source>Creating archive...</source>
         <translation>Ustvarjanje arhiva ...</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="1192"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1195"/>
         <source>The archive could not be created.
 
 Check that the destination folder is writable and that the input files are still available.</source>
@@ -1716,52 +1769,52 @@ Check that the destination folder is writable and that the input files are still
 Preverite, ali je v ciljno mapo mogoče pisati in ali so vhodne datoteke še na voljo.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="1227"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1230"/>
         <source>Size: %1</source>
         <translation>Velikost: %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="1232"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1235"/>
         <source>Transferred with the %1 destination.</source>
         <translation>Preneseno s ciljem %1.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="1234"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1237"/>
         <source>Transfer failed — %1</source>
         <translation>Prenos ni uspel — %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="1238"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1241"/>
         <source>Download link: %1</source>
         <translation>Povezava za prenos: %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="1243"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1246"/>
         <source>Password delivered via %1.</source>
         <translation>Geslo je bilo dostavljeno prek %1.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="1246"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1249"/>
         <source>The password was not sent because the transfer failed.</source>
         <translation>Geslo ni bilo poslano, ker prenos ni uspel.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="1248"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1251"/>
         <source>Password delivery failed — %1</source>
         <translation>Dostava gesla ni uspela — %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="1258"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1261"/>
         <source>Archive Created</source>
         <translation>Arhiv je ustvarjen</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="1258"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1261"/>
         <source>Archive Created With Problems</source>
         <translation>Arhiv je ustvarjen z opozorili</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="1260"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1263"/>
         <source>Archive created successfully!
 
 %1</source>
@@ -1770,53 +1823,53 @@ Preverite, ali je v ciljno mapo mogoče pisati in ali so vhodne datoteke še na 
 %1</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="1265"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1268"/>
         <source>Show in Folder</source>
         <translation>Pokaži v mapi</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="1268"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1271"/>
         <source>Copy Password</source>
         <translation>Kopiraj geslo</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="1272"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1275"/>
         <source>Copy Link</source>
         <translation>Kopiraj povezavo</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="1274"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1277"/>
         <source>Close</source>
         <translation>Zapri</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="1280"/>
         <location filename="../src/ui/MainDialog.cpp" line="1283"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1286"/>
         <source>Copied</source>
         <translation>Kopirano</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="1283"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1286"/>
         <source>Download link copied to clipboard.</source>
         <translation>Povezava za prenos je kopirana v odložišče.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="1286"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1289"/>
         <source>The archive folder could not be opened.</source>
         <translation>Mape arhiva ni bilo mogoče odpreti.</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="1313"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1316"/>
         <source>Error</source>
         <translation>Napaka</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="1319"/>
+        <location filename="../src/ui/MainDialog.cpp" line="1322"/>
         <source>Success</source>
         <translation>Uspeh</translation>
     </message>
     <message>
-        <location filename="../src/ui/MainDialog.cpp" line="965"/>
+        <location filename="../src/ui/MainDialog.cpp" line="968"/>
         <source>%1: %2</source>
         <translation>%1: %2</translation>
     </message>
@@ -2236,45 +2289,50 @@ Preverite, ali je v ciljno mapo mogoče pisati in ali so vhodne datoteke še na 
         <translation>tmpfiles.org je nalaganje zavrnil.</translation>
     </message>
     <message>
-        <location filename="../src/core/WebShareUpload.h" line="233"/>
+        <location filename="../src/core/WebShareUpload.h" line="232"/>
         <source>Pixeldrain rejected the upload.</source>
         <translation>Pixeldrain je nalaganje zavrnil.</translation>
     </message>
     <message>
-        <location filename="../src/core/WebShareUpload.h" line="234"/>
+        <location filename="../src/core/WebShareUpload.h" line="233"/>
         <source>Pixeldrain rejected the upload: %1</source>
         <translation>Pixeldrain je nalaganje zavrnil: %1</translation>
     </message>
     <message>
-        <location filename="../src/core/WebShareUpload.h" line="248"/>
+        <location filename="../src/core/WebShareUpload.h" line="247"/>
         <source>Gofile rejected the upload (%1).</source>
         <translation>Gofile je nalaganje zavrnil (%1).</translation>
     </message>
     <message>
-        <location filename="../src/core/WebShareUpload.h" line="268"/>
-        <location filename="../src/core/WebShareUpload.h" line="277"/>
+        <location filename="../src/core/WebShareUpload.h" line="267"/>
+        <location filename="../src/core/WebShareUpload.h" line="276"/>
         <source>The server did not return a download link.</source>
         <translation>Strežnik ni vrnil povezave za prenos.</translation>
     </message>
     <message>
-        <location filename="../src/core/WebShareUpload.h" line="278"/>
+        <location filename="../src/core/WebShareUpload.h" line="277"/>
         <source>The host refused the upload: %1</source>
         <translation>Gostitelj je nalaganje zavrnil: %1</translation>
     </message>
     <message>
-        <location filename="../src/core/WebShareUpload.h" line="312"/>
+        <location filename="../src/core/WebShareUpload.h" line="311"/>
         <source>Gofile did not report any upload server.</source>
         <translation>Gofile ni sporočil nobenega strežnika za nalaganje.</translation>
     </message>
     <message>
-        <location filename="../src/core/WebShareUpload.h" line="329"/>
+        <location filename="../src/core/WebShareUpload.h" line="328"/>
         <source>The archive file no longer exists.</source>
         <translation>Datoteka arhiva ne obstaja več.</translation>
     </message>
     <message>
-        <location filename="../src/core/WebShareUpload.h" line="341"/>
+        <location filename="../src/core/WebShareUpload.h" line="340"/>
         <source>Could not find a Gofile upload server.</source>
         <translation>Ni bilo mogoče najti strežnika Gofile za nalaganje.</translation>
+    </message>
+    <message>
+        <location filename="../plugins/destination/WebSharePlugin/WebShareProviderPlugin.cpp" line="29"/>
+        <source>Web share (custom endpoint)</source>
+        <translation>Spletna delitev (končna točka po meri)</translation>
     </message>
 </context>
 <context>
@@ -2358,12 +2416,12 @@ Preverite, ali je v ciljno mapo mogoče pisati in ali so vhodne datoteke še na 
 <context>
     <name>SchemaForm</name>
     <message>
-        <location filename="../src/qml/SchemaForm.qml" line="137"/>
+        <location filename="../src/qml/SchemaForm.qml" line="142"/>
         <source>Browse...</source>
         <translation>Prebrskaj ...</translation>
     </message>
     <message>
-        <location filename="../src/qml/SchemaForm.qml" line="154"/>
+        <location filename="../src/qml/SchemaForm.qml" line="159"/>
         <source>This value can also be changed in the main window.</source>
         <translation>To vrednost lahko spremenite tudi v glavnem oknu.</translation>
     </message>
@@ -2409,72 +2467,77 @@ Preverite, ali je v ciljno mapo mogoče pisati in ali so vhodne datoteke še na 
         <translation>Nastavitve cilja</translation>
     </message>
     <message>
-        <location filename="../src/qml/SettingsPage.qml" line="49"/>
+        <location filename="../src/qml/SettingsPage.qml" line="79"/>
         <source>Save</source>
         <translation>Shrani</translation>
     </message>
     <message>
-        <location filename="../src/qml/SettingsPage.qml" line="60"/>
+        <location filename="../src/qml/SettingsPage.qml" line="56"/>
         <source>Settings saved.</source>
         <translation>Nastavitve so shranjene.</translation>
     </message>
     <message>
-        <location filename="../src/qml/SettingsPage.qml" line="76"/>
+        <location filename="../src/qml/SettingsPage.qml" line="73"/>
+        <source>Back</source>
+        <translation>Nazaj</translation>
+    </message>
+    <message>
+        <location filename="../src/qml/SettingsPage.qml" line="93"/>
         <source>Configure how the password is delivered. Each channel keeps several profiles, for example one per mail server or recipient.</source>
         <translation>Nastavite, kako se dostavi geslo. Vsak kanal hrani več profilov, na primer enega na poštni strežnik ali prejemnika.</translation>
     </message>
     <message>
-        <location filename="../src/qml/SettingsPage.qml" line="77"/>
+        <location filename="../src/qml/SettingsPage.qml" line="94"/>
         <source>Configure where the archive is transferred. Each destination keeps several profiles, for example one per server or recipient.</source>
         <translation>Nastavite, kam se arhiv prenese. Vsak cilj hrani več profilov, na primer enega na strežnik ali prejemnika.</translation>
     </message>
     <message>
-        <location filename="../src/qml/SettingsPage.qml" line="82"/>
+        <location filename="../src/qml/SettingsPage.qml" line="99"/>
         <source>Plugin</source>
         <translation>Vtičnik</translation>
     </message>
     <message>
-        <location filename="../src/qml/SettingsPage.qml" line="97"/>
+        <location filename="../src/qml/SettingsPage.qml" line="114"/>
         <source>Profile</source>
         <translation>Profil</translation>
     </message>
     <message>
-        <location filename="../src/qml/SettingsPage.qml" line="110"/>
+        <location filename="../src/qml/SettingsPage.qml" line="127"/>
         <source>New</source>
         <translation>Nov</translation>
     </message>
     <message>
-        <location filename="../src/qml/SettingsPage.qml" line="118"/>
+        <location filename="../src/qml/SettingsPage.qml" line="135"/>
         <source>Rename</source>
         <translation>Preimenuj</translation>
     </message>
     <message>
-        <location filename="../src/qml/SettingsPage.qml" line="127"/>
+        <location filename="../src/qml/SettingsPage.qml" line="144"/>
         <source>Delete</source>
         <translation>Izbriši</translation>
     </message>
     <message>
-        <location filename="../src/qml/SettingsPage.qml" line="160"/>
+        <location filename="../src/qml/SettingsPage.qml" line="177"/>
         <source>Rename profile</source>
         <translation>Preimenovanje profila</translation>
     </message>
     <message>
-        <location filename="../src/qml/SettingsPage.qml" line="160"/>
+        <location filename="../src/qml/SettingsPage.qml" line="177"/>
         <source>New profile</source>
         <translation>Nov profil</translation>
     </message>
     <message>
-        <location filename="../src/qml/SettingsPage.qml" line="192"/>
+        <location filename="../src/qml/SettingsPage.qml" line="209"/>
         <source>Profile name</source>
         <translation>Ime profila</translation>
     </message>
     <message>
-        <location filename="../src/qml/SettingsPage.qml" line="199"/>
+        <location filename="../src/qml/SettingsPage.qml" line="216"/>
         <source>Delete profile</source>
         <translation>Brisanje profila</translation>
     </message>
     <message>
-        <location filename="../src/qml/SettingsPage.qml" line="223"/>
+        <location filename="../src/qml/SettingsPage.qml" line="240"/>
         <source>Delete the profile &quot;%1&quot;?</source>
         <translation>Ali naj se profil »%1« izbriše?</translation>
     </message>
@@ -2742,116 +2805,121 @@ Preverite, ali je v ciljno mapo mogoče pisati in ali so vhodne datoteke še na 
     </message>
 </context>
 <context>
-    <name>WebSharePlugin</name>
+    <name>WebShareProviderPlugin</name>
     <message>
-        <location filename="../plugins/destination/WebSharePlugin/WebSharePlugin.cpp" line="70"/>
-        <source>Provider</source>
-        <translation>Ponudnik</translation>
+        <location filename="../plugins/destination/WebSharePlugin/WebShareProviderPlugin.cpp" line="55"/>
+        <source>Upload the archive to any host that accepts a multipart POST and share the link</source>
+        <translation>Naloži arhiv na poljubnega gostitelja, ki sprejme multipart POST, in deli povezavo</translation>
     </message>
     <message>
-        <location filename="../plugins/destination/WebSharePlugin/WebSharePlugin.cpp" line="70"/>
-        <source>Where the archive is uploaded</source>
-        <translation>Kam se arhiv naloži</translation>
+        <location filename="../plugins/destination/WebSharePlugin/WebShareProviderPlugin.cpp" line="57"/>
+        <source>Upload the archive to %1 and share the download link</source>
+        <translation>Naloži arhiv na %1 in deli povezavo za prenos</translation>
     </message>
     <message>
-        <location filename="../plugins/destination/WebSharePlugin/WebSharePlugin.cpp" line="73"/>
+        <location filename="../plugins/destination/WebSharePlugin/WebShareProviderPlugin.cpp" line="99"/>
+        <source>API key</source>
+        <translation>Ključ API</translation>
+    </message>
+    <message>
+        <location filename="../plugins/destination/WebSharePlugin/WebShareProviderPlugin.cpp" line="100"/>
+        <source>Pixeldrain requires an API key; anonymous uploads are not accepted</source>
+        <translation>Pixeldrain zahteva ključ API; anonimna nalaganja niso dovoljena</translation>
+    </message>
+    <message>
+        <location filename="../plugins/destination/WebSharePlugin/WebShareProviderPlugin.cpp" line="104"/>
         <source>Account token</source>
         <translation>Žeton računa</translation>
     </message>
     <message>
-        <location filename="../plugins/destination/WebSharePlugin/WebSharePlugin.cpp" line="74"/>
-        <source>Pixeldrain requires an API key; Gofile and catbox accept an optional account token</source>
-        <translation>Pixeldrain zahteva ključ API; Gofile in catbox sprejmeta neobvezni žeton računa</translation>
+        <location filename="../plugins/destination/WebSharePlugin/WebShareProviderPlugin.cpp" line="105"/>
+        <source>Optional: ties uploads to your own Gofile account</source>
+        <translation>Neobvezno: nalaganja poveže z vašim računom Gofile</translation>
     </message>
     <message>
-        <location filename="../plugins/destination/WebSharePlugin/WebSharePlugin.cpp" line="76"/>
+        <location filename="../plugins/destination/WebSharePlugin/WebShareProviderPlugin.cpp" line="108"/>
+        <source>Account userhash</source>
+        <translation>Uporabniški hash računa</translation>
+    </message>
+    <message>
+        <location filename="../plugins/destination/WebSharePlugin/WebShareProviderPlugin.cpp" line="109"/>
+        <source>Optional: uploads then belong to your catbox account</source>
+        <translation>Neobvezno: nalaganja nato pripadajo vašemu računu catbox</translation>
+    </message>
+    <message>
+        <location filename="../plugins/destination/WebSharePlugin/WebShareProviderPlugin.cpp" line="114"/>
         <source>Expiry</source>
         <translation>Potek</translation>
     </message>
     <message>
-        <location filename="../plugins/destination/WebSharePlugin/WebSharePlugin.cpp" line="77"/>
-        <source>Only used by Litterbox, which deletes the upload afterwards</source>
-        <translation>Uporablja le Litterbox, ki nalaganje nato izbriše</translation>
+        <location filename="../plugins/destination/WebSharePlugin/WebShareProviderPlugin.cpp" line="115"/>
+        <source>The upload is deleted automatically after this time</source>
+        <translation>Nalaganje se po tem času samodejno izbriše</translation>
     </message>
     <message>
-        <location filename="../plugins/destination/WebSharePlugin/WebSharePlugin.cpp" line="81"/>
-        <source>Custom endpoint</source>
-        <translation>Končna točka po meri</translation>
+        <location filename="../plugins/destination/WebSharePlugin/WebShareProviderPlugin.cpp" line="123"/>
+        <source>Upload endpoint</source>
+        <translation>Končna točka za nalaganje</translation>
     </message>
     <message>
-        <location filename="../plugins/destination/WebSharePlugin/WebSharePlugin.cpp" line="82"/>
-        <source>Used with the custom provider; a multipart POST with a &apos;file&apos; field</source>
-        <translation>Uporablja se pri ponudniku po meri; multipart POST s poljem »file«</translation>
+        <location filename="../plugins/destination/WebSharePlugin/WebShareProviderPlugin.cpp" line="124"/>
+        <source>A host that accepts a multipart POST with a &apos;file&apos; field</source>
+        <translation>Gostitelj, ki sprejme multipart POST s poljem »file«</translation>
     </message>
     <message>
-        <location filename="../plugins/destination/WebSharePlugin/WebSharePlugin.cpp" line="85"/>
+        <location filename="../plugins/destination/WebSharePlugin/WebShareProviderPlugin.cpp" line="131"/>
         <source>Upload server</source>
         <translation>Strežnik za nalaganje</translation>
     </message>
     <message>
-        <location filename="../plugins/destination/WebSharePlugin/WebSharePlugin.cpp" line="86"/>
-        <source>Gofile upload server; leave empty to let Absand choose one</source>
-        <translation>Strežnik Gofile za nalaganje; pustite prazno, da Absand izbere enega</translation>
+        <location filename="../plugins/destination/WebSharePlugin/WebShareProviderPlugin.cpp" line="132"/>
+        <source>Usually detected automatically; set it to pin one server</source>
+        <translation>Običajno se zazna samodejno; nastavite ga, da določite strežnik</translation>
     </message>
     <message>
-        <location filename="../plugins/destination/WebSharePlugin/WebSharePlugin.cpp" line="89"/>
+        <location filename="../plugins/destination/WebSharePlugin/WebShareProviderPlugin.cpp" line="137"/>
         <source>Default save folder</source>
         <translation>Privzeta mapa za shranjevanje</translation>
     </message>
     <message>
-        <location filename="../plugins/destination/WebSharePlugin/WebSharePlugin.cpp" line="90"/>
+        <location filename="../plugins/destination/WebSharePlugin/WebShareProviderPlugin.cpp" line="138"/>
         <source>Where the archive is written before it is uploaded</source>
         <translation>Kam se arhiv zapiše, preden se naloži</translation>
     </message>
     <message>
-        <location filename="../plugins/destination/WebSharePlugin/WebSharePlugin.cpp" line="100"/>
-        <source>Please choose a web file host.</source>
-        <translation>Izberite spletnega gostitelja datotek.</translation>
-    </message>
-    <message>
-        <location filename="../plugins/destination/WebSharePlugin/WebSharePlugin.cpp" line="106"/>
+        <location filename="../plugins/destination/WebSharePlugin/WebShareProviderPlugin.cpp" line="152"/>
         <source>%1 needs an API key in the account token field.</source>
         <translation>%1 potrebuje ključ API v polju žetona računa.</translation>
     </message>
     <message>
-        <location filename="../plugins/destination/WebSharePlugin/WebSharePlugin.cpp" line="114"/>
+        <location filename="../plugins/destination/WebSharePlugin/WebShareProviderPlugin.cpp" line="161"/>
         <source>Please enter the upload endpoint URL.</source>
         <translation>Vnesite URL končne točke za nalaganje.</translation>
     </message>
     <message>
-        <location filename="../plugins/destination/WebSharePlugin/WebSharePlugin.cpp" line="120"/>
+        <location filename="../plugins/destination/WebSharePlugin/WebShareProviderPlugin.cpp" line="169"/>
         <source>Please choose where the archive is written locally.</source>
         <translation>Izberite, kam se arhiv zapiše lokalno.</translation>
     </message>
     <message>
-        <location filename="../plugins/destination/WebSharePlugin/WebSharePlugin.cpp" line="153"/>
+        <location filename="../plugins/destination/WebSharePlugin/WebShareProviderPlugin.cpp" line="201"/>
         <source>The archive file no longer exists.</source>
         <translation>Datoteka arhiva ne obstaja več.</translation>
     </message>
     <message>
-        <location filename="../plugins/destination/WebSharePlugin/WebSharePlugin.cpp" line="160"/>
+        <location filename="../plugins/destination/WebSharePlugin/WebShareProviderPlugin.cpp" line="208"/>
         <source>%1 accepts files up to %2 MB, but the archive is %3 MB.</source>
         <translation>%1 sprejme datoteke do %2 MB, arhiv pa ima %3 MB.</translation>
     </message>
     <message>
-        <location filename="../plugins/destination/WebSharePlugin/WebSharePlugin.cpp" line="171"/>
+        <location filename="../plugins/destination/WebSharePlugin/WebShareProviderPlugin.cpp" line="222"/>
         <source>%1 rejected the upload.</source>
         <translation>%1 je nalaganje zavrnil.</translation>
     </message>
     <message>
-        <location filename="../plugins/destination/WebSharePlugin/WebSharePlugin.cpp" line="176"/>
+        <location filename="../plugins/destination/WebSharePlugin/WebShareProviderPlugin.cpp" line="227"/>
         <source>Uploaded to %1: %2</source>
         <translation>Naloženo na %1: %2</translation>
-    </message>
-    <message>
-        <location filename="../plugins/destination/WebSharePlugin/WebSharePlugin.h" line="24"/>
-        <source>Web share</source>
-        <translation>Spletna delitev</translation>
-    </message>
-    <message>
-        <location filename="../plugins/destination/WebSharePlugin/WebSharePlugin.h" line="27"/>
-        <source>Upload the archive to an anonymous web file host and share the download link</source>
-        <translation>Naloži arhiv na anonimnega spletnega gostitelja datotek in deli povezavo za prenos</translation>
     </message>
 </context>
 <context>

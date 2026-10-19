@@ -112,6 +112,17 @@ bool qmlModuleAvailable(const QString& modulePath)
 }
 #endif // ABSAND_KIRIGAMI_FRONTEND
 
+/// Prints the version for "--version" / "-v" and returns true when it handled the call.
+bool handleVersionArgument(const QStringList& arguments)
+{
+    if (!arguments.contains(QStringLiteral("--version"))
+        && !arguments.contains(QStringLiteral("-v"))) {
+        return false;
+    }
+    std::printf("Absand %s\n", QCoreApplication::applicationVersion().toUtf8().constData());
+    return true;
+}
+
 QStringList fileArguments(const QStringList& arguments)
 {
     QStringList inputPaths;
@@ -179,6 +190,26 @@ int main(int argc, char* argv[])
         return 1;
     }
 
+    // Prints the choices the UI offers; handy when checking an installation.
+    if (app.arguments().contains(QStringLiteral("--print-options"))) {
+        qInfo().noquote() << "Version:" << QCoreApplication::applicationVersion();
+        qInfo().noquote() << "Archive formats:";
+        for (const QVariant& format : backend.formats()) {
+            qInfo().noquote() << "  -" << format.toMap().value(QStringLiteral("name")).toString();
+        }
+        qInfo().noquote() << "Destinations:";
+        for (const QVariant& destination : backend.destinations()) {
+            qInfo().noquote() << "  -" << destination.toMap().value(QStringLiteral("name")).toString()
+                              << "[" << destination.toMap().value(QStringLiteral("key")).toString() << "]";
+        }
+        qInfo().noquote() << "Password channels:";
+        for (const QVariant& channel : backend.channels()) {
+            qInfo().noquote() << "  -" << channel.toMap().value(QStringLiteral("name")).toString()
+                              << "[" << channel.toMap().value(QStringLiteral("key")).toString() << "]";
+        }
+        return 0;
+    }
+
     // Headless smoke test used by CI: instantiate every QML page once and exit.
     if (app.arguments().contains(QStringLiteral("--qml-selftest"))) {
         bool ok = true;
@@ -230,6 +261,9 @@ int main(int argc, char *argv[])
     loadLanguage(app, translator, UserConfig::language());
 
     QStringList arguments = app.arguments();
+    if (handleVersionArgument(arguments)) {
+        return 0;
+    }
     // "-h" is left out on purpose: users type it expecting help, and it used to
     // open the developer test harness window.
     const bool showTestHarness = arguments.contains(QStringLiteral("--harness"));

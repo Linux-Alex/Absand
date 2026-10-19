@@ -34,11 +34,51 @@ Kirigami.ScrollablePage {
         page.selectedPaths = [];
     }
 
+    /// Opens an archive and only asks for a password when the file needs one.
+    function openPath(path) {
+        page.message = "";
+        page.clearSelection();
+
+        const error = Browser.openArchive(path, "");
+        if (error.length > 0) {
+            if (Browser.passwordRequired) {
+                page.askPassword(path);
+            } else {
+                page.message = error;
+            }
+            return;
+        }
+
+        // Archives with encrypted entries list fine, but need the password for
+        // extracting, so ask right away instead of failing later.
+        if (Browser.passwordRequired) {
+            page.askPassword(Browser.archivePath);
+        }
+    }
+
+    function askPassword(path) {
+        passwordDialog.targetPath = path;
+        passwordField.text = "";
+        passwordDialog.open();
+    }
+
+    function applyPassword(path, password) {
+        const error = Browser.openArchive(path, password);
+        if (error.length > 0) {
+            page.message = error;
+            if (Browser.passwordRequired) {
+                page.askPassword(path);
+            }
+            return;
+        }
+        page.clearSelection();
+    }
+
     FileDialog {
         id: openDialog
         title: qsTr("Open archive")
         nameFilters: [ qsTr("Archives (*.7z *.zip)"), qsTr("All files (*)") ]
-        onAccepted: passwordDialog.selectedFile = selectedFile
+        onAccepted: page.openPath(selectedFile.toString().replace("file://", ""))
     }
 
     FileDialog {
@@ -46,8 +86,7 @@ Kirigami.ScrollablePage {
         title: qsTr("Select files to add")
         fileMode: FileDialog.OpenFiles
         onAccepted: {
-            var error = Browser.addFiles(selectedFiles);
-            page.message = error;
+            page.message = Browser.addFiles(selectedFiles);
             page.clearSelection();
         }
     }
@@ -63,77 +102,100 @@ Kirigami.ScrollablePage {
 
     QQC.Dialog {
         id: passwordDialog
-        property url selectedFile
+        property string targetPath: ""
         title: qsTr("Archive password")
         modal: true
         parent: QQC.Overlay.overlay
         x: parent ? Math.round((parent.width - width) / 2) : 0
         y: parent ? Math.round((parent.height - height) / 2) : 0
-        width: Kirigami.Units.gridUnit * 24
+        width: Kirigami.Units.gridUnit * 26
         standardButtons: QQC.Dialog.Ok | QQC.Dialog.Cancel
 
-        onAccepted: {
-            page.message = Browser.openArchive(passwordDialog.selectedFile.toString().replace("file://", ""),
-                                               passwordField.text);
-            page.clearSelection();
-        }
+        onAccepted: page.applyPassword(passwordDialog.targetPath, passwordField.text)
 
         contentItem: ColumnLayout {
             QQC.Label {
                 Layout.fillWidth: true
                 wrapMode: Text.WordWrap
-                text: qsTr("Enter the password if the archive is encrypted.")
+                text: qsTr("This archive is encrypted. Enter its password.")
             }
             QQC.TextField {
                 id: passwordField
                 Layout.fillWidth: true
                 echoMode: TextInput.Password
                 placeholderText: qsTr("Password")
+                onAccepted: passwordDialog.accept()
             }
         }
     }
 
-    actions: [
-        Kirigami.Action {
-            text: Browser.archiveOpen ? qsTr("Add files...") : qsTr("Add files...")
-            icon.name: "list-add"
-            enabled: Browser.archiveOpen
-            onTriggered: addDialog.open()
-        },
-        Kirigami.Action {
-            text: qsTr("Extract selected")
-            icon.name: "archive-extract"
-            enabled: page.selectedPaths.length > 0
-            onTriggered: extractDialog.open()
-        },
-        Kirigami.Action {
-            text: qsTr("Copy paths")
-            icon.name: "edit-copy"
-            enabled: page.selectedPaths.length > 0
-            onTriggered: Browser.copyPaths(page.selectedPaths)
-        },
-        Kirigami.Action {
-            text: qsTr("Refresh")
-            icon.name: "view-refresh"
-            enabled: Browser.archiveOpen
-            onTriggered: {
-                page.message = Browser.refresh();
-                page.clearSelection();
-            }
-        }
-    ]
-
     ColumnLayout {
         spacing: Kirigami.Units.largeSpacing
+
+        // A real toolbar: icons with readable labels, grouped with separators.
+        QQC.ToolBar {
+            Layout.fillWidth: true
+
+            contentItem: RowLayout {
+                spacing: Kirigami.Units.smallSpacing
+
+                QQC.ToolButton {
+                    icon.name: "document-open"
+                    text: qsTr("Open")
+                    display: QQC.AbstractButton.TextBesideIcon
+                    QQC.ToolTip.text: qsTr("Open an archive")
+                    QQC.ToolTip.visible: hovered
+                    onClicked: openDialog.open()
+                }
+                QQC.ToolButton {
+                    icon.name: "list-add"
+                    text: qsTr("Add files")
+                    display: QQC.AbstractButton.TextBesideIcon
+                    enabled: Browser.archiveOpen
+                    onClicked: addDialog.open()
+                }
+                QQC.ToolButton {
+                    icon.name: "archive-extract"
+                    text: qsTr("Extract")
+                    display: QQC.AbstractButton.TextBesideIcon
+                    enabled: page.selectedPaths.length > 0
+                    onClicked: extractDialog.open()
+                }
+                QQC.ToolButton {
+                    icon.name: "edit-copy"
+                    text: qsTr("Copy paths")
+                    display: QQC.AbstractButton.TextBesideIcon
+                    enabled: page.selectedPaths.length > 0
+                    onClicked: Browser.copyPaths(page.selectedPaths)
+                }
+                QQC.ToolButton {
+                    icon.name: "password-generate"
+                    text: qsTr("Set password")
+                    display: QQC.AbstractButton.TextBesideIcon
+                    visible: Browser.archiveOpen && Browser.archiveEncrypted
+                    onClicked: page.askPassword(Browser.archivePath)
+                }
+
+                QQC.ToolSeparator {}
+
+                QQC.ToolButton {
+                    icon.name: "view-refresh"
+                    text: qsTr("Refresh")
+                    display: QQC.AbstractButton.TextBesideIcon
+                    enabled: Browser.archiveOpen
+                    onClicked: {
+                        page.message = Browser.refresh();
+                        page.clearSelection();
+                    }
+                }
+
+                Item { Layout.fillWidth: true }
+            }
+        }
 
         RowLayout {
             Layout.fillWidth: true
 
-            QQC.Button {
-                text: qsTr("Open archive...")
-                icon.name: "document-open"
-                onClicked: openDialog.open()
-            }
             QQC.TextField {
                 Layout.fillWidth: true
                 readOnly: true
@@ -141,11 +203,28 @@ Kirigami.ScrollablePage {
                 placeholderText: qsTr("Open an archive to browse its contents")
             }
             QQC.TextField {
-                Layout.preferredWidth: Kirigami.Units.gridUnit * 12
+                Layout.preferredWidth: Kirigami.Units.gridUnit * 14
                 placeholderText: qsTr("Filter")
                 enabled: Browser.archiveOpen
                 onTextEdited: Browser.filterText = text
             }
+        }
+
+        Kirigami.InlineMessage {
+            Layout.fillWidth: true
+            visible: Browser.archiveOpen && Browser.archiveEncrypted
+            type: Browser.passwordRequired ? Kirigami.MessageType.Warning
+                                          : Kirigami.MessageType.Information
+            text: Browser.passwordRequired
+                  ? qsTr("This archive is encrypted. Set its password to extract files.")
+                  : qsTr("This archive is encrypted.")
+            actions: [
+                Kirigami.Action {
+                    text: qsTr("Set password")
+                    visible: Browser.passwordRequired
+                    onTriggered: page.askPassword(Browser.archivePath)
+                }
+            ]
         }
 
         QQC.Label {
@@ -153,11 +232,6 @@ Kirigami.ScrollablePage {
             visible: Browser.archiveOpen
             opacity: 0.7
             text: Browser.statusText
-        }
-
-        Kirigami.Separator {
-            Layout.fillWidth: true
-            visible: Browser.archiveOpen
         }
 
         ListView {
@@ -169,7 +243,6 @@ Kirigami.ScrollablePage {
             model: Browser.entries
 
             delegate: QQC.ItemDelegate {
-                id: entryRow
                 width: ListView.view.width
                 highlighted: page.isSelected(model.path)
 
@@ -191,7 +264,6 @@ Kirigami.ScrollablePage {
                         Layout.fillWidth: true
                         text: model.name
                         elide: Text.ElideMiddle
-                        // Entries arrive flattened with a depth; indent accordingly.
                         leftPadding: model.depth * Kirigami.Units.gridUnit
                     }
 

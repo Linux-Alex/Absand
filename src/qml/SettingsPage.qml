@@ -44,29 +44,46 @@ Kirigami.ScrollablePage {
 
     Component.onCompleted: reload()
 
-    actions: [
-        Kirigami.Action {
-            text: qsTr("Save")
-            icon.name: "document-save"
-            onTriggered: {
-                if (plugins.length === 0) {
-                    return;
-                }
-                var error = Backend.saveProfileValues(sendMode, plugins[pluginIndex].key, profile, values);
-                if (error.length > 0) {
-                    page.message = error;
-                    page.messageIsError = true;
-                } else {
-                    page.message = qsTr("Settings saved.");
-                    page.messageIsError = false;
-                    page.reload();
-                }
-            }
+    function save() {
+        if (plugins.length === 0) {
+            return;
         }
-    ]
+        var error = Backend.saveProfileValues(sendMode, plugins[pluginIndex].key, profile, values);
+        if (error.length > 0) {
+            page.message = error;
+            page.messageIsError = true;
+        } else {
+            page.message = qsTr("Settings saved.");
+            page.messageIsError = false;
+            page.reload();
+        }
+    }
 
     ColumnLayout {
         spacing: Kirigami.Units.largeSpacing
+
+        QQC.ToolBar {
+            Layout.fillWidth: true
+
+            contentItem: RowLayout {
+                spacing: Kirigami.Units.smallSpacing
+
+                QQC.ToolButton {
+                    icon.name: "go-previous"
+                    text: qsTr("Back")
+                    display: QQC.AbstractButton.TextBesideIcon
+                    onClicked: page.applicationWindow.pageStack.pop()
+                }
+                QQC.ToolButton {
+                    icon.name: "document-save"
+                    text: qsTr("Save")
+                    display: QQC.AbstractButton.TextBesideIcon
+                    onClicked: page.save()
+                }
+
+                Item { Layout.fillWidth: true }
+            }
+        }
 
         QQC.Label {
             Layout.fillWidth: true

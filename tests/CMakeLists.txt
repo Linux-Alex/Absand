@@ -37,7 +37,8 @@ set_target_properties(AbsandTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BI
 add_dependencies(AbsandTests ZipPlugin SevenZipPlugin ClipboardPlugin MatrixPlugin TeamsPlugin TelegramPlugin
     EmailPlugin SmsPlugin NtfyPlugin DiscordPlugin WebhookPlugin
     LocalFolderPlugin NetworkSharePlugin FTPDestinationPlugin SFTPDestinationPlugin EmailDestinationPlugin
-    WebSharePlugin)
+    WebShareGofilePlugin WebShareLitterboxPlugin WebShareTempshPlugin WebShareX0atPlugin
+    WebShareCatboxPlugin WebShareTmpfilesPlugin WebSharePixeldrainPlugin WebShareCustomPlugin)
 
 add_test(NAME Absand.PluginIntegration COMMAND AbsandTests)
 set_tests_properties(Absand.PluginIntegration PROPERTIES

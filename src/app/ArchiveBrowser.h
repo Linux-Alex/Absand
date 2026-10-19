@@ -38,6 +38,8 @@ public:
 
     Q_PROPERTY(QAbstractItemModel* entries READ entries CONSTANT)
     Q_PROPERTY(bool archiveOpen READ archiveOpen NOTIFY stateChanged)
+    Q_PROPERTY(bool archiveEncrypted READ archiveEncrypted NOTIFY stateChanged)
+    Q_PROPERTY(bool passwordRequired READ passwordRequired NOTIFY stateChanged)
     Q_PROPERTY(QString archivePath READ archivePath NOTIFY stateChanged)
     Q_PROPERTY(QString filterText READ filterText WRITE setFilterText NOTIFY filterTextChanged)
     Q_PROPERTY(int itemCount READ itemCount NOTIFY stateChanged)
@@ -46,6 +48,8 @@ public:
 
     QAbstractItemModel* entries();
     bool archiveOpen() const;
+    bool archiveEncrypted() const;
+    bool passwordRequired() const;
     QString archivePath() const;
     QString filterText() const;
     void setFilterText(const QString& text);
@@ -92,6 +96,8 @@ private:
     QString m_filterText;
     QString m_statusText;
     int m_matchingCount = 0;
+    bool m_archiveEncrypted = false;
+    bool m_passwordRequired = false;
 };
 
 #endif // ARCHIVEBROWSER_H

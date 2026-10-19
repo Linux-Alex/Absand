@@ -8,7 +8,7 @@ import org.kde.kirigami as Kirigami
 
 Kirigami.ApplicationWindow {
     id: window
-    title: qsTr("Absand")
+    title: qsTr("Absand %1").arg(Backend.applicationVersion)
     width: 780
     height: 900
     minimumWidth: 620
@@ -21,6 +21,14 @@ Kirigami.ApplicationWindow {
         title: qsTr("Absand")
         titleIcon: "document-encrypt"
         isMenu: false
+
+        footer: QQC.Label {
+            text: qsTr("Version %1").arg(Backend.applicationVersion)
+            opacity: 0.6
+            horizontalAlignment: Text.AlignHCenter
+            Layout.fillWidth: true
+            padding: Kirigami.Units.smallSpacing
+        }
 
         actions: [
             Kirigami.Action {
@@ -87,15 +95,7 @@ Kirigami.ApplicationWindow {
 
     Kirigami.ScrollablePage {
         id: mainPage
-        title: qsTr("Absand - Secure Archive Sender")
-
-        actions: [
-            Kirigami.Action {
-                text: qsTr("Archive browser")
-                icon.name: "folder-open"
-                onTriggered: window.pageStack.push(browserComponent)
-            }
-        ]
+        title: qsTr("Absand %1").arg(Backend.applicationVersion)
 
         ColumnLayout {
             spacing: Kirigami.Units.largeSpacing
@@ -159,20 +159,26 @@ Kirigami.ApplicationWindow {
                         }
                     }
 
-                    RowLayout {
+                    Flow {
+                        Layout.fillWidth: true
+                        spacing: Kirigami.Units.smallSpacing
+
                         QQC.Button {
                             text: qsTr("Add files...")
                             icon.name: "list-add"
+                            display: QQC.AbstractButton.TextBesideIcon
                             onClicked: filesDialog.open()
                         }
                         QQC.Button {
                             text: qsTr("Add folder...")
                             icon.name: "folder-new"
+                            display: QQC.AbstractButton.TextBesideIcon
                             onClicked: folderDialog.open()
                         }
                         QQC.Button {
                             text: qsTr("Remove")
                             icon.name: "list-remove"
+                            display: QQC.AbstractButton.TextBesideIcon
                             enabled: listView.currentIndex >= 0
                             onClicked: {
                                 Backend.removeFile(listView.currentIndex);
@@ -182,10 +188,10 @@ Kirigami.ApplicationWindow {
                         QQC.Button {
                             text: qsTr("Clear all")
                             icon.name: "edit-clear-all"
+                            display: QQC.AbstractButton.TextBesideIcon
                             enabled: Backend.inputCount > 0
                             onClicked: Backend.clearFiles()
                         }
-                        Item { Layout.fillWidth: true }
                     }
                 }
             }

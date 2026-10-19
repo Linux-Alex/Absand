@@ -71,7 +71,7 @@ private slots:
         QVERIFY2(manager.loadAllPlugins(), "No plugins loaded from the build output");
         QCOMPARE(manager.archivePlugins().size(), 2);
         QCOMPARE(manager.sendPlugins().size(), 9);
-        QCOMPARE(manager.destinationPlugins().size(), 6);
+        QCOMPARE(manager.destinationPlugins().size(), 13);
         QVERIFY(manager.archivePluginByName("zip archive"));
         QVERIFY(manager.sendPluginByName("CLIPBOARD"));
         QCOMPARE(manager.availableArchiveFormats(), QStringList({"7z", "zip"}));
@@ -87,7 +87,11 @@ private slots:
         QVERIFY(manager.sendPluginByName("Webhook"));
         QVERIFY(manager.destinationPluginByName("LOCAL FOLDER"));
         QVERIFY(manager.destinationPluginByName("E-mail (SMTP)"));
-        QVERIFY(manager.destinationPluginByName("WEB SHARE"));
+        for (const char* host : { "GOFILE", "LITTERBOX", "TEMP.SH", "X0.AT", "CATBOX.MOE",
+                                  "TMPFILES.ORG", "PIXELDRAIN" }) {
+            QVERIFY2(manager.destinationPluginByName(QString::fromLatin1(host)), host);
+        }
+        QVERIFY(manager.destinationPluginByName("Web share (custom endpoint)"));
     }
 
     void loadingTwiceDoesNotDuplicatePlugins()
@@ -667,11 +671,12 @@ private slots:
                      &error),
                  QString("https://gofile.io/d/abc123"));
 
+        // tmpfiles hands out its page link; the /dl/ variant no longer serves bytes.
         QCOMPARE(WebShareUpload::parseResponse(
                      QStringLiteral("tmpfiles"),
                      QByteArray("{\"status\":\"success\",\"data\":{\"url\":\"https://tmpfiles.org/1234/arhiv.zip\"}}"),
                      &error),
-                 QString("https://tmpfiles.org/dl/1234/arhiv.zip"));
+                 QString("https://tmpfiles.org/1234/arhiv.zip"));
 
         QCOMPARE(WebShareUpload::parseResponse(
                      QStringLiteral("pixeldrain"),
@@ -699,30 +704,37 @@ private slots:
         QVERIFY(!error.isEmpty());
     }
 
-    void webShareDestinationValidatesItsSettings()
+    void webShareDestinationsExposeOneEntryPerHost()
     {
-        auto* plugin = manager.destinationPluginByName("Web share");
-        QVERIFY(plugin);
-
         QString error;
-        QVERIFY(plugin->validateConfiguration(plugin->defaultConfiguration(), &error));
 
-        QVariantMap pixeldrain = plugin->defaultConfiguration();
-        pixeldrain.insert("provider", "pixeldrain");
-        QVERIFY(!plugin->validateConfiguration(pixeldrain, &error));
+        // Every host is its own destination with its own profile store.
+        auto* gofile = manager.destinationPluginByName("Gofile");
+        QVERIFY(gofile);
+        QCOMPARE(gofile->configKey(), QString("gofile"));
+        QVERIFY(gofile->validateConfiguration(gofile->defaultConfiguration(), &error));
+
+        auto* pixeldrain = manager.destinationPluginByName("pixeldrain");
+        QVERIFY(pixeldrain);
+        QCOMPARE(pixeldrain->configKey(), QString("pixeldrain"));
+        QVERIFY(!pixeldrain->validateConfiguration(pixeldrain->defaultConfiguration(), &error));
         QVERIFY(!error.isEmpty());
-        pixeldrain.insert("accountToken", "key");
-        QVERIFY(plugin->validateConfiguration(pixeldrain, &error));
+        QVariantMap withKey = pixeldrain->defaultConfiguration();
+        withKey.insert("accountToken", "api-key");
+        QVERIFY(pixeldrain->validateConfiguration(withKey, &error));
 
-        QVariantMap custom = plugin->defaultConfiguration();
-        custom.insert("provider", "custom");
-        QVERIFY(!plugin->validateConfiguration(custom, &error));
-        custom.insert("customUrl", "https://files.example/upload");
-        QVERIFY(plugin->validateConfiguration(custom, &error));
+        auto* custom = manager.destinationPluginByName("Web share (custom endpoint)");
+        QVERIFY(custom);
+        QVERIFY(!custom->validateConfiguration(custom->defaultConfiguration(), &error));
+        QVariantMap withUrl = custom->defaultConfiguration();
+        withUrl.insert("customUrl", "https://files.example/upload");
+        QVERIFY(custom->validateConfiguration(withUrl, &error));
 
-        QVariantMap unknown = plugin->defaultConfiguration();
-        unknown.insert("provider", "nowhere");
-        QVERIFY(!plugin->validateConfiguration(unknown, &error));
+        auto* litterbox = manager.destinationPluginByName("Litterbox");
+        QVERIFY(litterbox);
+        QVERIFY(litterbox->validateConfiguration(litterbox->defaultConfiguration(), &error));
+        QVERIFY(litterbox->defaultConfiguration().contains("expiry"));
+        QCOMPARE(litterbox->defaultConfiguration().value("expiry").toString(), QString("72h"));
     }
 
     void messageTemplateSupportsTheShareLink()
@@ -857,13 +869,115 @@ private slots:
         QVERIFY(sawEmailSchema);
 
         const QVariantList destinationSchemas = backend.pluginSettings(false);
-        QVERIFY(destinationSchemas.size() >= 5);
+        QVERIFY(destinationSchemas.size() >= 12);
 
         // Saving values through the facade validates them.
         const QString error = backend.saveProfileValues(
             true, QStringLiteral("email"), QStringLiteral("broken"),
             QVariantMap{ { "host", "" }, { "messageTemplate", "Password: {password}" } });
         QVERIFY(!error.isEmpty());
+    }
+
+    void localFolderDestinationShowsASingleFolder()
+    {
+        QTemporaryDir temp;
+        QVERIFY(temp.isValid());
+        UserConfig::setConfigRootOverrideForTests(temp.path());
+
+        AppBackend backend;
+
+        // Local folder is the default destination and must not ask for a second
+        // target: the save folder is the destination.
+        QCOMPARE(backend.destinationName(), QString("Local Folder"));
+        QVERIFY(!backend.destinationHasTarget());
+
+        const QString folder = temp.filePath("chosen-folder");
+        backend.setDestinationFolder(folder);
+        QCOMPARE(backend.destinationFolder(), folder);
+
+        // The choice is stored in the profile, so the settings dialog agrees.
+        const QVariantMap stored = UserConfig::loadProfile(UserConfig::ConfigKind::Destination,
+                                                           QStringLiteral("local_folder"));
+        QCOMPARE(stored.value("targetFolder").toString(), folder);
+
+        // Other destinations keep their own target field.
+        const QVariantList destinations = backend.destinations();
+        for (int index = 0; index < destinations.size(); ++index) {
+            const QString key = destinations.at(index).toMap().value("key").toString();
+            backend.setDestinationIndex(index);
+            if (key == "local_folder") {
+                QVERIFY(!backend.destinationHasTarget());
+            } else if (key == "ftp" || key == "sftp" || key == "email_destination") {
+                QVERIFY(backend.destinationHasTarget());
+            }
+        }
+
+        UserConfig::clearConfigRootOverrideForTests();
+    }
+
+    void archiveBrowserDetectsEncryptionInsteadOfAlwaysAsking()
+    {
+        QTemporaryDir temp;
+        QVERIFY(temp.isValid());
+
+        // Plain archive: no password needed, so the browser must not ask.
+        const QString plainInput = writeFile(temp.filePath("plain.txt"), "plain payload");
+        QVERIFY(!plainInput.isEmpty());
+        const QString plainArchive = temp.filePath("plain.zip");
+        auto* zipPlugin = manager.archivePluginByName("ZIP Archive");
+        QVERIFY(zipPlugin->createArchive({ plainInput }, plainArchive, {}));
+
+        ArchiveBrowser browser;
+        QCOMPARE(browser.openArchive(plainArchive, QString()), QString());
+        QVERIFY(browser.archiveOpen());
+        QVERIFY(!browser.archiveEncrypted());
+        QVERIFY(!browser.passwordRequired());
+        browser.closeArchive();
+
+        // Encrypted archive: the entries open without a password but extraction
+        // needs one, and the browser reports that.
+        const QString secretInput = writeFile(temp.filePath("secret.txt"), "classified payload");
+        QVERIFY(!secretInput.isEmpty());
+        const QString secretArchive = temp.filePath("secret.zip");
+        QVERIFY(zipPlugin->createArchive({ secretInput }, secretArchive, "browser-pass"));
+
+        QCOMPARE(browser.openArchive(secretArchive, QString()), QString());
+        QVERIFY(browser.archiveOpen());
+        QVERIFY(browser.archiveEncrypted());
+        QVERIFY(browser.passwordRequired());
+
+        const QString extractFolder = temp.filePath("out");
+        const QString failed = browser.extractPaths({ QStringLiteral("secret.txt") }, extractFolder);
+        QVERIFY2(!failed.isEmpty(), "extraction without a password must be reported");
+        {
+            // A partial file may have been created, but never the plaintext.
+            QFile leaked(QDir(extractFolder).filePath("secret.txt"));
+            if (leaked.open(QIODevice::ReadOnly)) {
+                QVERIFY(leaked.readAll() != QByteArray("classified payload"));
+            }
+        }
+
+        // Supplying the password makes the same browser instance usable.
+        QCOMPARE(browser.openArchive(secretArchive, QStringLiteral("browser-pass")), QString());
+        QVERIFY(browser.archiveEncrypted());
+        QVERIFY(!browser.passwordRequired());
+        // extractPaths() reports success with a human readable message.
+        QVERIFY(!browser.extractPaths({ QStringLiteral("secret.txt") }, extractFolder).isEmpty());
+        {
+            QFile extracted(QDir(extractFolder).filePath("secret.txt"));
+            QVERIFY(extracted.open(QIODevice::ReadOnly));
+            QCOMPARE(extracted.readAll(), QByteArray("classified payload"));
+        }
+
+        // WinZip AES does not encrypt the central directory, so a wrong password
+        // still lists the entries; the failure is reported when extracting and
+        // the browser then asks for the password again.
+        QVERIFY(browser.openArchive(secretArchive, QStringLiteral("wrong")).isEmpty());
+        QVERIFY(browser.archiveEncrypted());
+        const QString wrongExtraction =
+            browser.extractPaths({ QStringLiteral("secret.txt") }, temp.filePath("wrong-out"));
+        QVERIFY(!wrongExtraction.isEmpty());
+        QVERIFY(browser.passwordRequired());
     }
 
     void archiveBrowserListsFiltersAndExtractsEntries()

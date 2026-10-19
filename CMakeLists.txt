@@ -349,6 +349,18 @@ endif()
 
 # Install main executable
 install(TARGETS Absand RUNTIME DESTINATION bin)
+
+# Users type the program name in lowercase; provide that spelling too, for the
+# Debian package as well as manual installs.
+if(UNIX AND NOT APPLE)
+    install(CODE "
+        set(absand_bindir \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/bin\")
+        if(EXISTS \"\${absand_bindir}/Absand\")
+            execute_process(COMMAND \${CMAKE_COMMAND} -E create_symlink Absand \"\${absand_bindir}/absand\")
+            message(STATUS \"Installed symlink: \${absand_bindir}/absand -> Absand\")
+        endif()
+    ")
+endif()
 if(WIN32)
     install(FILES ${TRANSLATION_QM_FILES} DESTINATION bin/translations)
     install(DIRECTORY "${ABSAND_LICENSE_SOURCE_DIR}/" DESTINATION bin/licenses)

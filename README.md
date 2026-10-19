@@ -7,7 +7,8 @@ Absand is a cross-platform Qt desktop application for creating encrypted ZIP and
 ## Features
 
 - ZIP and 7z archive creation, browsing, and optional encryption
-- local-folder, network-share, FTP, SFTP, e-mail (SMTP), and anonymous **web share** destination plugins
+- local-folder, network-share, FTP, SFTP, e-mail (SMTP), and seven anonymous **web-share**
+  destinations (Gofile, Litterbox, temp.sh, x0.at, catbox.moe, tmpfiles.org, pixeldrain)
 - password delivery through clipboard, e-mail (SMTP), SMS, ntfy push, Telegram, Matrix,
   Microsoft Teams, Discord, or any custom webhook (Slack, Google Chat, Mattermost, Gotify, ...)
 - several named profiles per channel, for example one per mail server or recipient
@@ -25,8 +26,10 @@ Absand stores plugin settings as JSON in the current user's application-config d
 
 ## Web share (anonymous file hosts)
 
-The **Web share** destination uploads the finished archive to an anonymous file host and reports
-the download link; the link is shown in the summary, can be copied, and is available to password
+Every host is its own destination in the list — **Gofile**, **Litterbox**, **temp.sh**, **x0.at**,
+**catbox.moe**, **tmpfiles.org**, **pixeldrain**, plus **Web share (custom endpoint)** for any other
+service — so each one keeps its own profiles. The finished archive is uploaded there instead of
+FTP or a folder, the download link is reported, can be copied, and is available to password
 messages through the `{link}` placeholder:
 
 ```text
@@ -46,6 +49,11 @@ Choose one provider per profile:
 | tmpfiles.org | 100 MB | short lived (1–48 h) |
 | pixeldrain | 20 GB | needs an API key in the account token field |
 | Custom endpoint | — | any host that accepts a multipart POST with a `file` field |
+
+Limits are checked before uploading. The upload endpoints and response handling follow the live
+verification in [ducky-can-shoot's API research](https://github.com/Linux-Alex/ducky-can-shoot/blob/main/docs/research/cloud-upload-apis.md):
+tmpfiles.org therefore hands out its page link (the `/dl/` variant no longer serves the bytes) and
+pixeldrain uses HTTP basic authentication with the API key.
 
 The archive is written to the usual save folder first, so a failed upload never loses it, and the
 size limits are checked before the upload starts.
@@ -141,7 +149,9 @@ Absand ships two front ends that share the same core, plugins, and plugin schema
 - **Kirigami/QML** (`src/qml/`, `src/app/AppBackend.*`, `src/app/ArchiveBrowser.*`) — the modern
   KDE interface: an application window with a global drawer, Breeze-styled cards, an archive
   browser page, and settings pages that are generated from the `ConfigField` schemas the
-  plugins declare. Archive creation, transfer, and password delivery report progress inline.
+  plugins declare. Archive creation, transfer, and password delivery report progress inline, the window title and
+the drawer show the version, and the archive browser only asks for a password when the archive is
+actually encrypted.
 - **Widgets** (`src/ui/`) — the classic dialog, used automatically when no matching KF6
   Kirigami is installed.
 
@@ -262,7 +272,7 @@ fi
 /usr/local/bin/Absand
 ```
 
-The first CMake configure may download bit7z's pinned CPM bootstrap dependency. After installation, Absand is available from the desktop application menu, the KDE/Dolphin service menu, and `/usr/local/bin/Absand`.
+The first CMake configure may download bit7z's pinned CPM bootstrap dependency. After installation, Absand is available from the desktop application menu, the KDE/Dolphin service menu, and as both `/usr/local/bin/Absand` and `absand` (a lowercase alias for terminal use). `absand --version` prints the installed version.
 
 To archive files immediately from the command line:
 

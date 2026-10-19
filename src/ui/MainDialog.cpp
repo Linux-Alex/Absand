@@ -120,7 +120,7 @@ MainDialog::~MainDialog() = default;
 
 void MainDialog::setupUI()
 {
-    setWindowTitle(tr("Absand - Secure Archive Sender"));
+    setWindowTitle(tr("Absand %1 - Secure Archive Sender").arg(QCoreApplication::applicationVersion()));
 
     ui->inputListWidget->setSelectionMode(QAbstractItemView::ExtendedSelection);
     ui->inputListWidget->setAlternatingRowColors(true);
@@ -274,7 +274,7 @@ void MainDialog::changeEvent(QEvent* event)
 {
     if (event->type() == QEvent::LanguageChange) {
         ui->retranslateUi(this);
-        setWindowTitle(tr("Absand - Secure Archive Sender"));
+        setWindowTitle(tr("Absand %1 - Secure Archive Sender").arg(QCoreApplication::applicationVersion()));
         if (m_themeLabel) m_themeLabel->setText(tr("Theme"));
         if (m_languageLabel) m_languageLabel->setText(tr("Language"));
         if (m_openArchiveBrowserButton) m_openArchiveBrowserButton->setText(tr("Open Archive Browser..."));
@@ -765,7 +765,10 @@ void MainDialog::updateDestinationProfileControls()
     }
 
     const ConfigSchema schema = plugin ? plugin->configSchema() : ConfigSchema();
-    const ConfigField* target = schemaRecipientField(schema);
+    // A local folder destination is the folder the archive is written to, so no
+    // second target field is shown for it.
+    const bool showsTarget = plugin && plugin->configKey() != QStringLiteral("local_folder");
+    const ConfigField* target = showsTarget ? schemaRecipientField(schema) : nullptr;
 
     if (m_destinationRecipientLabel) {
         m_destinationRecipientLabel->setVisible(target != nullptr);

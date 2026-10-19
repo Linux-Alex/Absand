@@ -100,6 +100,7 @@ public:
     Q_PROPERTY(bool resultHasPassword READ resultHasPassword NOTIFY resultChanged)
 
     // Appearance
+    Q_PROPERTY(QString applicationVersion READ applicationVersion CONSTANT)
     Q_PROPERTY(QStringList languages READ languages CONSTANT)
     Q_PROPERTY(int languageIndex READ languageIndex WRITE setLanguageIndex NOTIFY languageChanged)
 
@@ -163,6 +164,7 @@ public:
     QString resultShareLink() const;
     bool resultHasPassword() const;
 
+    QString applicationVersion() const;
     QStringList languages() const;
     int languageIndex() const;
     void setLanguageIndex(int index);

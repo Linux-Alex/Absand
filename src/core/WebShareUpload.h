@@ -216,11 +216,10 @@ inline QString parseResponse(const QString& providerId, const QByteArray& respon
             }
             return {};
         }
-        QString url = object.value(QStringLiteral("data")).toObject()
-                          .value(QStringLiteral("url")).toString();
-        // The returned page is an HTML view; /dl/ serves the file directly.
-        url.replace(QStringLiteral("tmpfiles.org/"), QStringLiteral("tmpfiles.org/dl/"));
-        return url;
+        // tmpfiles answers with the page URL; the documented /dl/ variant no
+        // longer serves the bytes (verified upstream), so the page link is used.
+        return object.value(QStringLiteral("data")).toObject()
+            .value(QStringLiteral("url")).toString();
     }
 
     if (providerId == QStringLiteral("pixeldrain")) {
