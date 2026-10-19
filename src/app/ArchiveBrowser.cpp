@@ -424,19 +424,29 @@ QString ArchiveBrowser::addFiles(const QStringList& localFiles)
         return QString();
     }
 
+    // The reader keeps the archive open; Windows refuses to replace the file
+    // while it does, so close it first and reopen afterwards.
+    const QString archivePath = m_archivePath;
+    const QString password = m_password;
+    m_reader.reset();
+
     try {
-        bit7z::BitArchiveWriter writer(*m_library, m_archivePath.toStdString(), *m_format,
-                                       m_password.toStdString());
+        bit7z::BitArchiveWriter writer(*m_library, archivePath.toStdString(), *m_format,
+                                       password.toStdString());
         std::vector<bit7z::tstring> paths;
         paths.reserve(static_cast<std::size_t>(localFiles.size()));
         for (const QString& file : localFiles) {
             paths.push_back(file.toStdString());
         }
         writer.addFiles(paths);
-        writer.compressTo(m_archivePath.toStdString());
+        writer.compressTo(archivePath.toStdString());
     } catch (const std::exception& exception) {
+        m_reader.reset();
+        const QString reloadError = openArchive(archivePath, password);
+        Q_UNUSED(reloadError);
         return tr("Adding files failed: %1").arg(exception.what());
     }
 
-    return refresh();
+    // Reload so the entry list reflects the new files.
+    return openArchive(archivePath, password);
 }

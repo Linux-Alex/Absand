@@ -234,18 +234,18 @@ jobs:
           ctest --test-dir build-windows --output-on-failure -V
           test_status=$?
           if [ ${test_status} -ne 0 ]; then
-            echo "::warning::Tests failed on Windows (exit ${test_status}); see the log above."
+            # Console output is unreliable on this runner, so the failing cases
+            # are written to a report file and printed from there.
             echo "--- executable subsystem:"
             objdump -p ./build-windows/AbsandTests.exe | grep -i subsystem || true
             echo "--- unresolved dependencies:"
             ldd ./build-windows/AbsandTests.exe | grep -i "not found" || echo "none"
-            echo "--- direct run with a report file:"
-            QT_QPA_PLATFORM=offscreen ./build-windows/AbsandTests.exe -o "$PWD/test-report.txt,txt" -o -,txt
-            echo "direct exit: $?"
-            echo "--- report file:"
+            QT_QPA_PLATFORM=offscreen ./build-windows/AbsandTests.exe -o "$PWD/test-report.txt,txt" > /dev/null 2>&1
+            echo "--- test report:"
             cat "$PWD/test-report.txt" 2>/dev/null || echo "no report written"
           fi
           set -e
+          exit ${test_status}
           cmake --install build-windows
           bash packaging/windows/bundle-runtime.sh "$PWD/stage/Absand/bin"
 

@@ -43,11 +43,43 @@ private:
         return path;
     }
 
+    /// Copies the archive to an ASCII path when needed: libzip opens files with a
+    /// narrow path, which cannot express the non-ASCII names used in one test on
+    /// Windows. The archive contents are what the test is about.
+    static QString readableArchiveCopy(const QString& archivePath)
+    {
+        bool ascii = true;
+        for (const QChar character : archivePath) {
+            if (character.unicode() > 127) {
+                ascii = false;
+                break;
+            }
+        }
+        if (ascii) {
+            return archivePath;
+        }
+
+        QTemporaryFile copy(QDir::tempPath() + QStringLiteral("/absand-verify-XXXXXX.zip"));
+        if (!copy.open()) {
+            return archivePath;
+        }
+        QFile source(archivePath);
+        if (!source.open(QIODevice::ReadOnly)) {
+            return archivePath;
+        }
+        copy.write(source.readAll());
+        copy.flush();
+        const QString name = copy.fileName();
+        copy.setAutoRemove(false);
+        return name;
+    }
+
     static QByteArray readZipEntry(const QString& archivePath, const QString& entry,
                                    const QByteArray& password = {})
     {
         int error = 0;
-        zip_t* archive = zip_open(QFile::encodeName(archivePath).constData(), ZIP_RDONLY, &error);
+        zip_t* archive = zip_open(QFile::encodeName(readableArchiveCopy(archivePath)).constData(),
+                                  ZIP_RDONLY, &error);
         if (!archive)
             return {};
         zip_file_t* file = password.isEmpty()

@@ -815,16 +815,22 @@ bool ArchiveBrowserDialog::addFilesToArchive(const QStringList& files)
         return false;
     }
 
+    // Replacing the archive fails while the reader still holds it open (Windows
+    // reports "Access is denied"), so drop the reader first.
+    const QString archivePath = m_archivePath;
+    const QString password = m_password;
+    m_reader.reset();
+
     try {
         bit7z::BitArchiveWriter writer(
             *m_library,
-            m_archivePath.toStdString(),
+            archivePath.toStdString(),
             *m_format,
-            m_password.toStdString()
+            password.toStdString()
         );
         writer.setUpdateMode(bit7z::UpdateMode::Update);
         writer.addFiles(toBit7zPaths(files));
-        writer.compressTo(m_archivePath.toStdString());
+        writer.compressTo(archivePath.toStdString());
         return true;
     } catch (const std::exception& ex) {
         showError(tr("Failed to add files: %1").arg(ex.what()));
